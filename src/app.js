@@ -47,6 +47,8 @@
         if (!window.claude || !claude.use) return;
         const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
         if (user && !S.name) { try { const me = await user.me(); if (me && me.name) { S.name = me.name.split(' ')[0]; Store.save(); Net.updatePresence(); renderHud(); } } catch (e) {} }
+        // TEMP (remove later): one-time 500,000 coins for the page owner only
+        try { if (user && user.isOwner && user.isOwner() && !S.ownerGift500k) { S.ownerGift500k = true; S.tokens += 500000; Store.save(); renderHud(); toast('🎁 Owner gift: +500,000 🪙', 'good'); } } catch (e) {}
         if (!db || !user) return;
         const id = await user.id(); if (!id) return;
         this.doc = db.collection('data/users/' + id).doc('state');
