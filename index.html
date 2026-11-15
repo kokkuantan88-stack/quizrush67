@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACS Math Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3efff;--card:#fff;--ink:#231a4a;--muted:#6d6693;--line:#e4def8;--violet:#6c4cf5;--violet2:#8f76ff;--yellow:#ffc93c;--red:#ff5d73;--green:#20bf8a;--blue:#3aa0ff;--orange:#ff9a3c;--shadow:0 6px 0 rgba(60,40,140,.12),0 10px 24px rgba(60,40,140,.08)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-size:16px}
+button{font-family:inherit;cursor:pointer;border:0}
+h1,h2,h3,.brand,.big{font-family:Fredoka,Nunito,sans-serif;letter-spacing:.2px}
+h2{margin:0 0 12px;font-size:24px}h3{margin:0 0 8px;font-size:18px}
+.top{position:sticky;top:0;z-index:20;background:var(--violet);color:#fff;display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap;box-shadow:0 4px 0 #5233d6}
+.brand{font-size:22px;font-weight:700;display:flex;align-items:center;gap:8px;margin-right:6px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:var(--yellow);color:var(--ink);display:grid;place-items:center;font-size:20px;box-shadow:0 3px 0 #d9a520}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:rgba(255,255,255,.14);color:#fff;padding:8px 14px;border-radius:12px;font-weight:800;font-size:15px}
+.tab.on{background:#fff;color:var(--violet)}
+.tab:disabled{opacity:.45;cursor:not-allowed}
+.hud{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pill{background:rgba(0,0,0,.18);padding:6px 12px;border-radius:999px;font-weight:800;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.pill.coin{background:var(--yellow);color:var(--ink);box-shadow:0 3px 0 #d9a520}
+.pill.bump{animation:bump .5s}
+@keyframes bump{30%{transform:scale(1.25)}}
+main{max-width:1040px;margin:0 auto;padding:18px 14px 60px}
+.card{background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.muted{color:var(--muted)}.small{font-size:13px}
+.btn{background:var(--violet);color:#fff;font-weight:800;padding:12px 18px;border-radius:14px;box-shadow:0 4px 0 #4a2fc4;font-size:16px;transition:transform .05s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #4a2fc4}
+.btn.ghost{background:#efeafe;color:var(--violet);box-shadow:0 4px 0 #d6ccfb}
+.btn.green{background:var(--green);box-shadow:0 4px 0 #14966b}
+.btn.red{background:var(--red);box-shadow:0 4px 0 #d63e55}
+.btn.yellow{background:var(--yellow);color:var(--ink);box-shadow:0 4px 0 #d9a520}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:8px 12px;font-size:14px;border-radius:12px}
+.chip{background:#efeafe;color:var(--violet);font-weight:800;padding:8px 14px;border-radius:999px}
+.chip.on{background:var(--violet);color:#fff}
+.topic{background:#faf8ff;border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;color:var(--ink);font-weight:800;font-size:15px}
+.topic.on{border-color:var(--violet);background:#f1edff}
+.bar{height:8px;background:#ebe6fb;border-radius:9px;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--violet2),var(--violet));border-radius:9px}
+.diff{border-radius:18px;padding:16px;color:#fff;text-align:left;font-weight:800}
+.diff .big{font-size:22px}
+.diff.on{outline:4px solid var(--ink);outline-offset:2px}
+.d0{background:var(--green);box-shadow:0 5px 0 #14966b}.d1{background:var(--blue);box-shadow:0 5px 0 #2079d1}.d2{background:var(--red);box-shadow:0 5px 0 #d63e55}
+.switch{display:flex;align-items:center;gap:8px;font-weight:800}
+.switch input{width:20px;height:20px;accent-color:var(--violet)}
+/* quiz */
+.qwrap{max-width:720px;margin:0 auto;position:relative}
+.dots{display:flex;gap:6px;margin-bottom:12px}
+.dots i{flex:1;height:10px;border-radius:9px;background:#e1dbf7}
+.dots i.ok{background:var(--green)}.dots i.no{background:var(--red)}.dots i.cur{background:var(--violet)}
+.timer{height:8px;background:#e1dbf7;border-radius:9px;overflow:hidden;margin-bottom:12px}
+.timer i{display:block;height:100%;background:var(--orange);transition:width .25s linear}
+#qcard{position:relative;min-height:180px;transition:transform .5s,filter .2s;overflow:hidden}
+#qcard.flipped{transform:rotate(180deg)}
+.qtext{font-size:21px;font-weight:700;line-height:1.5}
+.qmeta{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.tag{font-size:12px;font-weight:800;background:#efeafe;color:var(--violet);padding:4px 10px;border-radius:999px}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.8em;line-height:1.05;margin:0 2px}
+.fr sup{border-bottom:2px solid currentColor;padding:0 2px}.fr sub{padding:0 2px}
+.fr sup,.fr sub{vertical-align:baseline;position:static;font-size:1em}
+#answerArea{margin-top:14px;position:relative}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{background:#faf8ff;border:2px solid var(--line);border-radius:14px;padding:14px;font-size:18px;font-weight:800;color:var(--ink);text-align:left}
+.choice:hover{border-color:var(--violet)}
+.ansrow{display:flex;gap:10px}
+.ansrow input{flex:1;font-size:22px;font-weight:800;padding:12px 14px;border-radius:14px;border:2px solid var(--line);font-family:inherit;color:var(--ink);min-width:0}
+.ansrow input:focus{outline:none;border-color:var(--violet)}
+.keypad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.key{background:#efeafe;color:var(--ink);font-weight:800;font-size:20px;padding:12px 0;border-radius:12px;box-shadow:0 3px 0 #d6ccfb}
+.frozen{pointer-events:none}
+.ice{position:absolute;inset:-6px;border-radius:16px;background:linear-gradient(135deg,rgba(170,220,255,.85),rgba(230,247,255,.75));display:grid;place-items:center;font-size:28px;font-weight:800;color:#2470b8;z-index:5;font-family:Fredoka}
+.flash{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;pointer-events:none;animation:pop .6s forwards;z-index:6}
+@keyframes pop{0%{transform:scale(.3);opacity:0}40%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:0}}
+.splat{position:absolute;border-radius:50%;cursor:pointer;z-index:4;animation:splat .25s ease-out}
+@keyframes splat{from{transform:scale(0)}}
+.flipback{position:absolute;right:12px;bottom:12px;z-index:7}
+.fogtip{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:#fff;padding:4px 10px;border-radius:999px;font-weight:800;font-size:13px;z-index:7;box-shadow:var(--shadow)}
+.sabbanner{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:800;box-shadow:var(--shadow);animation:drop .4s}
+@keyframes drop{from{transform:translate(-50%,-30px);opacity:0}}
+body.glitch{--bg:#ffe0f1;--card:#fff0f8;--violet:#ff3fa4;--ink:#7a0046}
+body.glitch .qtext,body.glitch .choice,body.glitch input{font-family:"Comic Sans MS","Comic Neue",cursive!important}
+body.glitch #qcard{animation:wobble 1.2s infinite}
+@keyframes wobble{25%{transform:rotate(-1deg)}75%{transform:rotate(1deg)}}
+/* results */
+.sol{border-left:4px solid var(--red);padding:8px 12px;margin:10px 0;background:#fff7f8;border-radius:0 12px 12px 0}
+.sol .ans{font-weight:800;color:var(--green)}
+.earn{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-weight:700}
+/* toasts */
+#toasts{position:fixed;right:14px;bottom:14px;z-index:80;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-weight:700;max-width:320px;box-shadow:var(--shadow);animation:drop .3s}
+.toast.good{background:var(--green)}.toast.bad{background:var(--red)}.toast.msg{background:var(--blue)}
+.sticker{position:fixed;left:50%;top:45%;font-size:140px;z-index:90;pointer-events:none;animation:stick 2.2s forwards}
+@keyframes stick{0%{transform:translate(-50%,-50%) scale(0) rotate(-30deg)}20%{transform:translate(-50%,-50%) scale(1.2) rotate(10deg)}35%{transform:translate(-50%,-50%) scale(1)}85%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,10,50,.55);z-index:70;display:grid;place-items:center;padding:14px}
+.modal .card{max-width:560px;width:100%}
+/* arcade */
+.gametile{border-radius:18px;padding:16px;color:#fff;text-align:left;min-height:120px;display:flex;flex-direction:column;justify-content:space-between}
+.gametile .big{font-size:22px}.gametile .e{font-size:34px}
+.gamebox{display:flex;flex-direction:column;align-items:center;gap:12px}
+canvas{max-width:100%;border-radius:14px;touch-action:none}
+.g2048{display:grid;grid-template-columns:repeat(4,72px);gap:8px;background:#cfc4f5;padding:8px;border-radius:14px;touch-action:none}
+.g2048 div{height:72px;border-radius:10px;display:grid;place-items:center;font-family:Fredoka;font-weight:700;font-size:26px;background:#e9e3fd;color:var(--ink)}
+.mines{display:grid;gap:3px;background:#cfc4f5;padding:6px;border-radius:12px;user-select:none}
+.mines button{width:34px;height:34px;border-radius:7px;background:#8f76ff;color:#fff;font-weight:800;font-size:16px;padding:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2)}
+.mines button.open{background:#f6f3ff;box-shadow:none;color:var(--ink)}
+.mines button.boom{background:var(--red)}
+.mem{display:grid;grid-template-columns:repeat(4,86px);gap:8px}
+.mem button{height:72px;border-radius:12px;background:var(--violet);color:#fff;font-weight:800;font-size:20px;box-shadow:0 4px 0 #4a2fc4}
+.mem button.up{background:#fff;color:var(--ink);border:2px solid var(--line);box-shadow:none}
+.mem button.done{background:var(--green);color:#fff;box-shadow:none}
+.dpad{display:grid;grid-template-columns:repeat(3,56px);gap:6px}
+.dpad button{height:48px;border-radius:12px;background:#efeafe;font-size:22px;color:var(--violet);font-weight:800}
+/* chess */
+.chesswrap{display:grid;grid-template-columns:minmax(0,520px) 1fr;gap:14px;align-items:start}
+@media(max-width:820px){.chesswrap{grid-template-columns:1fr}}
+.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:1;border-radius:14px;overflow:hidden;box-shadow:var(--shadow);border:6px solid #4a2fc4;user-select:none}
+.sq{position:relative;aspect-ratio:1;min-width:0;display:grid;place-items:center;font-size:clamp(26px,6vw,46px);line-height:1;padding:0;background:none}
+.sq.l{background:#efe9ff}.sq.d{background:#9b86f0}
+.sq.sel{background:#ffd75e!important}.sq.last{box-shadow:inset 0 0 0 999px rgba(255,201,60,.38)}.sq.chk{background:radial-gradient(circle,#ff5d73 20%,transparent 75%)}
+.sq.hint{box-shadow:inset 0 0 0 4px var(--green)}
+.sq .dot{position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(35,26,74,.28)}
+.sq .cap{position:absolute;inset:6%;border-radius:50%;border:4px solid rgba(35,26,74,.28)}
+.pc{position:relative;z-index:1}
+.pc.w{color:#fff;text-shadow:0 0 2px #231a4a,0 0 2px #231a4a,0 2px 0 #231a4a}
+.pc.b{color:#231a4a;text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.coord{position:absolute;font-size:10px;font-weight:800;opacity:.6;left:3px;top:2px}
+.movelist{max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:14px;background:#faf8ff;border-radius:12px;padding:8px}
+/* friends */
+.friend{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;border:2px solid var(--line);background:#faf8ff;width:100%;text-align:left;color:var(--ink);font-weight:800}
+.friend.on{border-color:var(--violet);background:#f1edff}
+.av{width:40px;height:40px;border-radius:12px;background:#fff;display:grid;place-items:center;font-size:24px;box-shadow:0 2px 0 var(--line)}
+.status{font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;background:#e6f9f1;color:#14966b}
+.status.idle{background:#efeafe;color:var(--muted)}
+.sabbtn{background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px;text-align:left;color:var(--ink);display:flex;flex-direction:column;gap:4px}
+.sabbtn:hover{border-color:var(--violet)}
+.sabbtn .e{font-size:28px}.sabbtn b{font-size:15px}
+.cost{font-weight:800;color:#b07800}
+.preview{font-size:12px;font-weight:800;color:var(--violet);background:#efeafe;padding:3px 8px;border-radius:8px;align-self:flex-start}
+input.text{font-family:inherit;font-size:16px;font-weight:700;padding:10px 12px;border-radius:12px;border:2px solid var(--line);color:var(--ink)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">∑</span>Math Quest</div>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="hud">
+    <span class="pill" id="hudArcade" title="Arcade time">⏱ <span>0:00</span></span>
+    <span class="pill coin" id="hudTokens" title="Tokens">🪙 <span>0</span></span>
+    <span class="pill" id="hudMe">🦊</span>
+  </div>
+</header>
+<main id="view"></main>
+<div id="toasts"></div>
+<script>
+// ===== Chess engine (rules + bot) =====
+const Chess = (() => {
+  const KN = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+  const KG = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+  const DIAG = [[-1,-1],[-1,1],[1,-1],[1,1]], ORTH = [[-1,0],[1,0],[0,-1],[0,1]];
+  const isW = p => p >= 'A' && p <= 'Z';
+  const colorOf = p => p === '.' ? null : (isW(p) ? 'w' : 'b');
+  const inB = (r, f) => r >= 0 && r < 8 && f >= 0 && f < 8;
+
+  function newGame() {
+    const rows = ['rnbqkbnr','pppppppp','........','........','........','........','PPPPPPPP','RNBQKBNR'];
+    return { b: rows.join('').split(''), turn: 'w', cr: 'KQkq', ep: -1, half: 0, full: 1 };
+  }
+  function fromFEN(fen) {
+    const [pos, turn, cr, ep, half, full] = fen.split(' ');
+    const b = [];
+    for (const ch of pos.replace(/\//g, '')) { if (/\d/.test(ch)) for (let i = 0; i < +ch; i++) b.push('.'); else b.push(ch); }
+    let e = -1; if (ep && ep !== '-') e = (8 - +ep[1]) * 8 + (ep.charCodeAt(0) - 97);
+    return { b, turn, cr: cr === '-' ? '' : cr, ep: e, half: +(half || 0), full: +(full || 1) };
+  }
+  function attacked(b, s, by) {
+    const r = s >> 3, f = s & 7;
+    if (by === 'w') { for (const df of [-1, 1]) { const rr = r + 1, ff = f + df; if (inB(rr, ff) && b[rr*8+ff] === 'P') return true; } }
+    else { for (const df of [-1, 1]) { const rr = r - 1, ff = f + df; if (inB(rr, ff) && b[rr*8+ff] === 'p') return true; } }
+    const n = by === 'w' ? 'N' : 'n', k = by === 'w' ? 'K' : 'k';
+    const B1 = by === 'w' ? 'B' : 'b', R1 = by === 'w' ? 'R' : 'r', Q1 = by === 'w' ? 'Q' : 'q';
+    for (const [dr, df] of KN) { const rr = r + dr, ff = f + df; if (inB(rr, ff) && b[rr*8+ff] === n) return true; }
+    for (const [dr, df] of KG) { const rr = r + dr, ff = f + df; if (inB(rr, ff) && b[rr*8+ff] === k) return true; }
+    for (const [dr, df] of DIAG) { let rr = r + dr, ff = f + df; while (inB(rr, ff)) { const p = b[rr*8+ff]; if (p !== '.') { if (p === B1 || p === Q1) return true; break; } rr += dr; ff += df; } }
+    for (const [dr, df] of ORTH) { let rr = r + dr, ff = f + df; while (inB(rr, ff)) { const p = b[rr*8+ff]; if (p !== '.') { if (p === R1 || p === Q1) return true; break; } rr += dr; ff += df; } }
+    return false;
+  }
+  const kingSq = (b, c) => b.indexOf(c === 'w' ? 'K' : 'k');
+  const inCheck = (st, c = st.turn) => attacked(st.b, kingSq(st.b, c), c === 'w' ? 'b' : 'w');
+
+  function pseudo(st) {
+    const b = st.b, c = st.turn, moves = [], opp = c === 'w' ? 'b' : 'w';
+    for (let s = 0; s < 64; s++) {
+      const p = b[s]; if (p === '.' || colorOf(p) !== c) continue;
+      const r = s >> 3, f = s & 7, t = p.toUpperCase();
+      const add = (to, extra) => moves.push(Object.assign({ from: s, to, piece: p, cap: b[to] }, extra || {}));
+      if (t === 'P') {
+        const dir = c === 'w' ? -1 : 1, start = c === 'w' ? 6 : 1, last = c === 'w' ? 0 : 7, r1 = r + dir;
+        if (r1 < 0 || r1 > 7) continue;
+        if (b[r1*8+f] === '.') {
+          if (r1 === last) { for (const pr of 'QRBN') add(r1*8+f, { promo: pr }); }
+          else { add(r1*8+f); if (r === start && b[(r+2*dir)*8+f] === '.') add((r+2*dir)*8+f, { dbl: true }); }
+        }
+        for (const df of [-1, 1]) {
+          const ff = f + df; if (ff < 0 || ff > 7) continue;
+          const to = r1*8+ff, q = b[to];
+          if (q !== '.' && colorOf(q) !== c) { if (r1 === last) { for (const pr of 'QRBN') add(to, { promo: pr }); } else add(to); }
+          else if (q === '.' && to === st.ep) add(to, { epCap: true, cap: c === 'w' ? 'p' : 'P' });
+        }
+      } else if (t === 'N' || t === 'K') {
+        for (const [dr, df] of (t === 'N' ? KN : KG)) {
+          const rr = r + dr, ff = f + df; if (!inB(rr, ff)) continue;
+          const q = b[rr*8+ff]; if (q === '.' || colorOf(q) !== c) add(rr*8+ff);
+        }
+        if (t === 'K') {
+          if (c === 'w' && s === 60) {
+            if (st.cr.includes('K') && b[61] === '.' && b[62] === '.' && b[63] === 'R' && !attacked(b,60,opp) && !attacked(b,61,opp) && !attacked(b,62,opp)) add(62, { castle: 'K' });
+            if (st.cr.includes('Q') && b[59] === '.' && b[58] === '.' && b[57] === '.' && b[56] === 'R' && !attacked(b,60,opp) && !attacked(b,59,opp) && !attacked(b,58,opp)) add(58, { castle: 'Q' });
+          }
+          if (c === 'b' && s === 4) {
+            if (st.cr.includes('k') && b[5] === '.' && b[6] === '.' && b[7] === 'r' && !attacked(b,4,opp) && !attacked(b,5,opp) && !attacked(b,6,opp)) add(6, { castle: 'k' });
+            if (st.cr.includes('q') && b[3] === '.' && b[2] === '.' && b[1] === '.' && b[0] === 'r' && !attacked(b,4,opp) && !attacked(b,3,opp) && !attacked(b,2,opp)) add(2, { castle: 'q' });
+          }
+        }
+      } else {
+        const dirs = t === 'B' ? DIAG : t === 'R' ? ORTH : DIAG.concat(ORTH);
+        for (const [dr, df] of dirs) {
+          let rr = r + dr, ff = f + df;
+          while (inB(rr, ff)) { const q = b[rr*8+ff]; if (q === '.') add(rr*8+ff); else { if (colorOf(q) !== c) add(rr*8+ff); break; } rr += dr; ff += df; }
+        }
+      }
+    }
+    return moves;
+  }
+  function make(st, m) {
+    const b = st.b.slice(), c = st.turn;
+    b[m.to] = m.promo ? (c === 'w' ? m.promo : m.promo.toLowerCase()) : m.piece;
+    b[m.from] = '.';
+    if (m.epCap) b[m.to + (c === 'w' ? 8 : -8)] = '.';
+    if (m.castle === 'K') { b[61] = 'R'; b[63] = '.'; }
+    if (m.castle === 'Q') { b[59] = 'R'; b[56] = '.'; }
+    if (m.castle === 'k') { b[5] = 'r'; b[7] = '.'; }
+    if (m.castle === 'q') { b[3] = 'r'; b[0] = '.'; }
+    let cr = st.cr;
+    if (m.piece === 'K') cr = cr.replace('K', '').replace('Q', '');
+    if (m.piece === 'k') cr = cr.replace('k', '').replace('q', '');
+    for (const s of [m.from, m.to]) {
+      if (s === 63) cr = cr.replace('K', ''); if (s === 56) cr = cr.replace('Q', '');
+      if (s === 7) cr = cr.replace('k', ''); if (s === 0) cr = cr.replace('q', '');
+    }
+    return { b, turn: c === 'w' ? 'b' : 'w', cr, ep: m.dbl ? (m.from + m.to) / 2 : -1,
+      half: (m.piece.toUpperCase() === 'P' || m.cap !== '.') ? 0 : st.half + 1, full: st.full + (c === 'b' ? 1 : 0) };
+  }
+  function legal(st) {
+    return pseudo(st).filter(m => { const ns = make(st, m); return !attacked(ns.b, kingSq(ns.b, st.turn), ns.turn); });
+  }
+  function perft(st, d) { if (d === 0) return 1; let n = 0; for (const m of legal(st)) n += perft(make(st, m), d - 1); return n; }
+  const key = st => st.b.join('') + st.turn + st.cr + st.ep;
+  function insufficient(b) {
+    const ps = b.filter(p => p !== '.' && p.toUpperCase() !== 'K');
+    if (ps.length === 0) return true;
+    if (ps.length === 1 && 'NBnb'.includes(ps[0])) return true;
+    return false;
+  }
+
+  // ---- evaluation ----
+  const VAL = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 };
+  const PST = {
+    P: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+    N: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+    B: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+    R: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+    Q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+    K: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
+  };
+  function evaluate(b) { // white's perspective
+    let s = 0;
+    for (let i = 0; i < 64; i++) {
+      const p = b[i]; if (p === '.') continue;
+      const t = p.toUpperCase();
+      if (isW(p)) s += VAL[t] + PST[t][i];
+      else s -= VAL[t] + PST[t][(7 - (i >> 3)) * 8 + (i & 7)];
+    }
+    return s;
+  }
+  const order = ms => ms.sort((a, b) => score(b) - score(a));
+  const score = m => (m.cap !== '.' ? 10 * VAL[m.cap.toUpperCase()] - VAL[m.piece.toUpperCase()] / 10 + 1000 : 0) + (m.promo ? 800 : 0);
+
+  let nodes = 0, deadline = Infinity, aborted = false;
+  function quiesce(st, alpha, beta, qd) {
+    nodes++;
+    const stand = (st.turn === 'w' ? 1 : -1) * evaluate(st.b);
+    if (stand >= beta) return beta;
+    if (alpha < stand) alpha = stand;
+    if (qd <= 0) return alpha;
+    const caps = order(legal(st).filter(m => m.cap !== '.' || m.promo));
+    for (const m of caps) {
+      const v = -quiesce(make(st, m), -beta, -alpha, qd - 1);
+      if (v >= beta) return beta;
+      if (v > alpha) alpha = v;
+    }
+    return alpha;
+  }
+  function negamax(st, depth, alpha, beta, ply) {
+    nodes++;
+    if ((nodes & 1023) === 0 && Date.now() > deadline) aborted = true;
+    if (aborted) return 0;
+    const ms = legal(st);
+    if (ms.length === 0) return inCheck(st) ? -100000 + ply : 0;
+    if (st.half >= 100) return 0;
+    if (depth === 0) return quiesce(st, alpha, beta, 4);
+    order(ms);
+    let best = -Infinity;
+    for (const m of ms) {
+      const v = -negamax(make(st, m), depth - 1, -beta, -alpha, ply + 1);
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+  function searchRoot(st, depth, noise, prevBest) {
+    let ms = order(legal(st));
+    if (prevBest) { const i = ms.findIndex(m => m.from === prevBest.from && m.to === prevBest.to && m.promo === prevBest.promo); if (i > 0) ms.unshift(ms.splice(i, 1)[0]); }
+    let best = null, bestV = -Infinity, alpha = -Infinity;
+    for (const m of ms) {
+      // noisy levels search every root move with a full window so bounds never get mistaken for exact scores
+      let v = -negamax(make(st, m), depth - 1, -Infinity, noise ? Infinity : -alpha, 1);
+      if (aborted) break;
+      if (noise) v += (Math.random() - 0.5) * noise;
+      if (v > bestV) { bestV = v; best = m; }
+      if (v > alpha) alpha = v;
+    }
+    return { move: best, score: bestV };
+  }
+  // level 1..5
+  const LEVELS = {
+    1: { depth: 1, noise: 400, random: 0.4, time: 500 },
+    2: { depth: 1, noise: 120, random: 0.1, time: 500 },
+    3: { depth: 2, noise: 40, random: 0, time: 1200 },
+    4: { depth: 3, noise: 10, random: 0, time: 2000 },
+    5: { depth: 5, noise: 0, random: 0, time: 2500 },
+  };
+  function bestMove(st, level) {
+    const L = LEVELS[level] || LEVELS[3];
+    const ms = legal(st); if (!ms.length) return null;
+    if (Math.random() < L.random) return ms[Math.floor(Math.random() * ms.length)];
+    nodes = 0; aborted = false; deadline = Date.now() + L.time;
+    let best = null;
+    for (let d = 1; d <= L.depth; d++) {
+      const r = searchRoot(st, d, L.noise, best);
+      if (aborted && best) break;
+      if (r.move) best = r.move;
+      if (r.score > 90000) break;
+    }
+    aborted = false; deadline = Infinity;
+    return best || ms[0];
+  }
+  return { newGame, fromFEN, legal, make, inCheck, perft, key, insufficient, bestMove, colorOf, evaluate };
+})();
+if (typeof module !== 'undefined') module.exports = Chess;
+
+// ===== Question generators (MOE-style P6 / Sec 1 / Sec 2) =====
+const Quiz = (() => {
+  const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const r2 = x => Math.round(x * 100) / 100;
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); n /= g; d /= g; return d === 1 ? `${n}` : `${n}/${d}`; };
+  const F = (n, d) => { const s = fr(n, d); if (!s.includes('/')) return s; const [a, b] = s.split('/'); const neg = a.startsWith('-'); return `${neg ? '−' : ''}<span class="fr"><sup>${neg ? a.slice(1) : a}</sup><sub>${b}</sub></span>`; };
+  const money = x => '$' + (Number.isInteger(x) ? x : x.toFixed(2));
+  const sgn = (n, first) => first ? (n < 0 ? '−' + Math.abs(n) : '' + n) : (n < 0 ? ' − ' + Math.abs(n) : ' + ' + n);
+  const neg = n => n < 0 ? `(−${Math.abs(n)})` : `${n}`;
+  // polynomial a x^2 + b x + c with variable v
+  function poly(cs, v = 'x') {
+    const deg = cs.length - 1; let out = '';
+    cs.forEach((c, i) => {
+      const p = deg - i; if (c === 0) return;
+      const first = out === '';
+      const abs = Math.abs(c);
+      const coef = (abs === 1 && p > 0) ? '' : abs;
+      const term = coef + (p === 0 ? '' : p === 1 ? v : v + '²');
+      out += first ? (c < 0 ? '−' + term : term) : (c < 0 ? ' − ' + term : ' + ' + term);
+    });
+    return out || '0';
+  }
+  // multiple choice from a correct string + distractors
+  function mcq(q, correct, wrongs, sol) {
+    const opts = [correct]; for (const w of wrongs) if (!opts.includes(w) && opts.length < 4) opts.push(w);
+    let k = 0; while (opts.length < 4 && k++ < 20) { const w = correct + ' '; if (!opts.includes(w)) opts.push(w); }
+    for (let i = opts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    return { text: q, choices: opts, answer: opts.indexOf(correct), sol };
+  }
+  const num = (text, answer, sol, extra) => Object.assign({ text, answer, sol }, extra || {});
+
+  const G = {
+    // ---------------- PRIMARY 6 ----------------
+    'P6:Fractions': d => {
+      if (d === 0) { const den = pick([3,4,5,6,8]), nu = ri(1, den - 1), n = den * ri(3, 15); const a = n * nu / den;
+        return num(`Find ${F(nu, den)} of ${n}.`, a, `${n} ÷ ${den} = ${n / den}<br>${n / den} × ${nu} = <b>${a}</b>`); }
+      if (d === 1) { const d1 = pick([3,4,5]), n1 = ri(1, d1 - 1), d2 = pick([3,4,5,6]), n2 = ri(1, d2 - 1), T = d1 * d2 * ri(2, 8) * 5;
+        const R = T - T * n1 / d1, left = R - R * n2 / d2;
+        return num(`Mei had $${T}. She spent ${F(n1, d1)} of it on a bag and ${F(n2, d2)} of the remainder on shoes. How much money did she have left?`, left,
+          `Spent on bag: ${F(n1, d1)} × ${T} = $${T * n1 / d1}<br>Remainder: ${T} − ${T * n1 / d1} = $${R}<br>Spent on shoes: ${F(n2, d2)} × ${R} = $${R * n2 / d2}<br>Left: ${R} − ${R * n2 / d2} = <b>$${left}</b>`, { unit: '$' }); }
+      const a = pick([2,3,4,5]), b = ri(1, a - 1), c = pick([3,4,5]), e = ri(1, c - 1), x = a * c * ri(2, 6);
+      const R = x - x * b / a, L = R - R * e / c;
+      return num(`Ravi had some marbles. He gave ${F(b, a)} of them to Ali and ${F(e, c)} of the remainder to Ben. He had ${L} marbles left. How many marbles did he have at first?`, x,
+        `Work backwards. ${L} is ${F(c - e, c)} of the remainder, so remainder = ${L} ÷ ${c - e} × ${c} = ${R}<br>${R} is ${F(a - b, a)} of the total, so total = ${R} ÷ ${a - b} × ${a} = <b>${x}</b>`);
+    },
+    'P6:Percentage': d => {
+      if (d === 0) { const p = 5 * ri(1, 19), n = 20 * ri(2, 25), a = n * p / 100;
+        return num(`Find ${p}% of ${n}.`, a, `${p}/100 × ${n} = <b>${a}</b>`); }
+      if (d === 1) { const P = 20 * ri(2, 15), p = pick([10,15,20,25,30,40]), sale = P * (100 - p) / 100;
+        return num(`A jacket costs $${P}. During a sale it is sold at a ${p}% discount. What is the sale price?`, sale,
+          `Discount = ${p}% × ${P} = $${P * p / 100}<br>Sale price = ${P} − ${P * p / 100} = <b>$${sale}</b>`, { unit: '$' }); }
+      const p = pick([10,20,25,30,40]), orig = 20 * ri(2, 20), sale = orig * (100 - p) / 100;
+      return num(`After a ${p}% discount, a bag costs $${sale}. What was the original price?`, orig,
+        `$${sale} is ${100 - p}% of the original.<br>1% = ${sale} ÷ ${100 - p} = $${r2(sale / (100 - p))}<br>100% = <b>$${orig}</b>`, { unit: '$' });
+    },
+    'P6:Ratio': d => {
+      if (d === 0) { const a = ri(1, 5), b = ri(a + 1, 9), u = ri(3, 20), N = (a + b) * u;
+        return num(`$${N} is shared between Amy and Ben in the ratio ${a} : ${b}. How much does Ben get?`, b * u,
+          `Total units = ${a} + ${b} = ${a + b}<br>1 unit = ${N} ÷ ${a + b} = $${u}<br>Ben = ${b} × ${u} = <b>$${b * u}</b>`, { unit: '$' }); }
+      if (d === 1) { const a = ri(2, 4), b = ri(a + 1, 6), c = ri(b + 1, 9), u = ri(4, 15);
+        return num(`The ratio of red to blue to green beads is ${a} : ${b} : ${c}. There are ${(c - a) * u} more green beads than red beads. How many beads are there altogether?`, (a + b + c) * u,
+          `Green − red = ${c} − ${a} = ${c - a} units = ${(c - a) * u}<br>1 unit = ${u}<br>Total = ${a + b + c} units = <b>${(a + b + c) * u}</b>`); }
+      let a, b, p, q, guard = 0;
+      do { a = ri(2, 6); b = ri(2, 7); p = ri(1, 5); q = ri(2, 9); guard++; }
+      while ((gcd(a, b) !== 1 || gcd(p, q) !== 1 || p * (a + b) >= a * (p + q)) && guard < 500);
+      if (guard >= 500) { a = 3; b = 5; p = 1; q = 3; }
+      const lcm = (a + b) * (p + q) / gcd(a + b, p + q), T = lcm * ri(1, 3), A = T * a / (a + b), B = T - A, t = A - T * p / (p + q);
+      return num(`The ratio of Jun's stickers to Kai's stickers was ${a} : ${b}. After Jun gave ${t} stickers to Kai, the ratio became ${p} : ${q}. How many stickers did Jun have at first?`, A,
+        `The total does not change. Before: ${a + b} units; after: ${p + q} parts.<br>Make the totals the same: Jun's share changes from ${a}/${a + b} to ${p}/${p + q} of the total.<br>${a}/${a + b} − ${p}/${p + q} of the total = ${t}, so total = ${A + B}<br>Jun at first = ${a}/${a + b} × ${A + B} = <b>${A}</b>`);
+    },
+    'P6:Speed': d => {
+      if (d === 0) { const v = 5 * ri(8, 20), t = ri(2, 5);
+        return num(`A car travels at ${v} km/h for ${t} hours. How far does it travel (in km)?`, v * t, `Distance = speed × time = ${v} × ${t} = <b>${v * t} km</b>`, { unit: 'km' }); }
+      if (d === 1) { const v1 = 10 * ri(4, 8), t1 = ri(1, 3), v2 = 10 * ri(4, 8), t2 = ri(1, 3), D = v1 * t1 + v2 * t2, avg = r2(D / (t1 + t2));
+        return num(`A bus travelled at ${v1} km/h for ${t1} h and then at ${v2} km/h for ${t2} h. What was its average speed for the whole journey, in km/h? (Round to 2 d.p. if needed.)`, avg,
+          `Total distance = ${v1}×${t1} + ${v2}×${t2} = ${D} km<br>Total time = ${t1 + t2} h<br>Average speed = ${D} ÷ ${t1 + t2} = <b>${avg} km/h</b>`, { unit: 'km/h', tol: 0.01 }); }
+      const v1 = 10 * ri(4, 9), v2 = 10 * ri(4, 9), mins = pick([30, 45, 60, 75, 90, 120]), D = (v1 + v2) * mins / 60;
+      return num(`Town A and Town B are ${D} km apart. A van leaves A towards B at ${v1} km/h. At the same time a lorry leaves B towards A at ${v2} km/h. How many minutes later do they meet?`, mins,
+        `They close the gap at ${v1} + ${v2} = ${v1 + v2} km/h<br>Time = ${D} ÷ ${v1 + v2} h = ${D / (v1 + v2)} h = <b>${mins} min</b>`, { unit: 'min' });
+    },
+    'P6:Algebra': d => {
+      if (d === 0) { const a = ri(2, 9), b = ri(1, 20), x = ri(2, 12);
+        return num(`Find the value of ${a}k + ${b} when k = ${x}.`, a * x + b, `${a} × ${x} + ${b} = ${a * x} + ${b} = <b>${a * x + b}</b>`); }
+      if (d === 1) { const c = pick([2, 3, 4]), a = c * ri(1, 2) + 1, x = ri(2, 15); const b0 = a * x - c * ri(1, Math.floor((a * x - 1) / c)); const b = b0;
+        return num(`Find the value of (${a}m − ${b}) ÷ ${c} when m = ${x}.`, (a * x - b) / c, `${a} × ${x} − ${b} = ${a * x - b}<br>${a * x - b} ÷ ${c} = <b>${(a * x - b) / c}</b>`); }
+      const p = ri(2, 6), n1 = ri(2, 6), n2 = ri(2, 5), k = ri(2, 4);
+      return num(`A pen costs $p and a book costs ${k} times as much as a pen. Ali buys ${n1} pens and ${n2} books. If p = ${p}, how much does he pay?`, n1 * p + n2 * k * p,
+        `Book = ${k}p. Total = ${n1}p + ${n2} × ${k}p = ${n1 + n2 * k}p<br>When p = ${p}: ${n1 + n2 * k} × ${p} = <b>$${n1 * p + n2 * k * p}</b>`, { unit: '$' });
+    },
+    'P6:Area and volume': d => {
+      if (d === 0) { const l = ri(3, 20), w = ri(2, 12), h = ri(2, 10);
+        return num(`A cuboid is ${l} cm long, ${w} cm wide and ${h} cm high. Find its volume in cm³.`, l * w * h, `Volume = ${l} × ${w} × ${h} = <b>${l * w * h} cm³</b>`, { unit: 'cm³' }); }
+      if (d === 1) { const r = ri(2, 20), area = r2(3.14 * r * r);
+        return num(`Find the area of a circle of radius ${r} cm. (Take π = 3.14)`, area, `Area = π r² = 3.14 × ${r} × ${r} = <b>${area} cm²</b>`, { unit: 'cm²', tol: 0.01 }); }
+      const l = pick([20, 25, 30, 40, 50]), w = pick([10, 20, 25, 30]), h1 = ri(5, 15), add = ri(2, 9) * l * w / 1000; const rise = add * 1000 / (l * w);
+      if (!Number.isInteger(rise * 10)) return G['P6:Area and volume'](2);
+      return num(`A tank is ${l} cm long and ${w} cm wide. It contains water to a height of ${h1} cm. ${add} ℓ of water is poured in. What is the new height of the water, in cm?`, h1 + rise,
+        `${add} ℓ = ${add * 1000} cm³<br>Rise = ${add * 1000} ÷ (${l} × ${w}) = ${rise} cm<br>New height = ${h1} + ${rise} = <b>${h1 + rise} cm</b>`, { unit: 'cm' });
+    },
+    'P6:Average': d => {
+      if (d === 0) { const xs = [ri(10, 99), ri(10, 99), ri(10, 99)]; const s = xs.reduce((a, b) => a + b); const extra = (4 - s % 4) % 4 + 4 * ri(3, 20); xs.push(extra);
+        const t = s + extra; return num(`Find the average of ${xs.join(', ')}.`, t / 4, `Sum = ${t}<br>Average = ${t} ÷ 4 = <b>${t / 4}</b>`); }
+      if (d === 1) { const n = ri(5, 8), A = ri(20, 60), B = ri(A - 8, A + 8); const removed = n * A - (n - 1) * B; if (removed <= 0) return G['P6:Average'](1);
+        return num(`The average of ${n} numbers is ${A}. When one number is removed, the average of the rest is ${B}. What number was removed?`, removed,
+          `Total of ${n} numbers = ${n} × ${A} = ${n * A}<br>Total of ${n - 1} numbers = ${n - 1} × ${B} = ${(n - 1) * B}<br>Removed = <b>${removed}</b>`); }
+      const b = ri(12, 25), g = ri(12, 25), ab = ri(40, 70), ag = ri(40, 70), tot = b * ab + g * ag, avg = r2(tot / (b + g));
+      return num(`In a class, ${b} boys scored an average of ${ab} marks and ${g} girls scored an average of ${ag} marks. What is the average score of the whole class? (Round to 2 d.p.)`, avg,
+        `Boys' total = ${b * ab}, girls' total = ${g * ag}<br>Class total = ${tot}, pupils = ${b + g}<br>Average = <b>${avg}</b>`, { tol: 0.01 });
+    },
+    // ---------------- SECONDARY 1 ----------------
+    'Sec 1:Integers': d => {
+      if (d === 0) { const a = ri(-15, -1), b = ri(1, 20), c = ri(-12, -1);
+        return num(`Evaluate ${neg(a)} + ${b} − ${neg(c)}.`, a + b - c, `${a} + ${b} = ${a + b}<br>${a + b} − (${c}) = ${a + b} + ${-c} = <b>${a + b - c}</b>`); }
+      if (d === 1) { const a = ri(-9, -2), b = ri(-9, -2), c = ri(-6, -2), m = c * ri(1, 6);
+        return num(`Evaluate ${neg(a)} × ${neg(b)} − ${m} ÷ ${neg(c)}.`, a * b - m / c, `${a} × ${b} = ${a * b}<br>${m} ÷ ${c} = ${m / c}<br>${a * b} − (${m / c}) = <b>${a * b - m / c}</b>`); }
+      const a = ri(-4, -2), b = ri(-5, -2), k = pick([2, 4, 8]), c = ri(1, 4); const sq = b * b; if ((c * sq) % k) return G['Sec 1:Integers'](2);
+      const ans = a ** 3 - c * sq / k;
+      return num(`Evaluate (${a})³ − ${c} × (${b})² ÷ ${k}.`, ans, `(${a})³ = ${a ** 3}<br>(${b})² = ${sq}<br>${c} × ${sq} ÷ ${k} = ${c * sq / k}<br>${a ** 3} − ${c * sq / k} = <b>${ans}</b>`);
+    },
+    'Sec 1:Linear equations': d => {
+      const x = ri(-6, 12);
+      if (d === 0) { const a = ri(2, 9), b = ri(-15, 20); return num(`Solve ${a}x${sgn(b)} = ${a * x + b}.`, x, `${a}x = ${a * x + b}${sgn(-b)} = ${a * x}<br>x = ${a * x} ÷ ${a} = <b>${x}</b>`); }
+      if (d === 1) { const a = ri(4, 9), c = ri(1, a - 1), b = ri(-12, 12), e = (a - c) * x + b;
+        return num(`Solve ${a}x${sgn(b)} = ${c}x${sgn(e)}.`, x, `${a}x − ${c}x = ${e}${sgn(-b)}<br>${a - c}x = ${e - b}<br>x = <b>${x}</b>`); }
+      const m = pick([2, 3, 4, 5]), n = pick([2, 3, 4, 5].filter(v => v !== m)), a = ri(1, 4), b = ri(-5, 5), c = ri(1, 3), e = ri(-5, 5);
+      const L = m * n; const num1 = n * (a * x + b) - m * (c * x + e); // RHS = num1 / L
+      const coef = n * a - m * c; if (coef === 0) return G['Sec 1:Linear equations'](2);
+      return num(`Solve (${poly([a, b])}) / ${m} − (${poly([c, e])}) / ${n} = ${F(num1, L)}.`, x,
+        `Multiply both sides by ${L}: ${n}(${poly([a, b])}) − ${m}(${poly([c, e])}) = ${num1}<br>${poly([n * a, n * b])} − (${poly([m * c, m * e])}) = ${num1}<br>${poly([coef, n * b - m * e])} = ${num1}<br>${coef}x = ${num1 - (n * b - m * e)}<br>x = <b>${x}</b>`);
+    },
+    'Sec 1:Algebraic expressions': d => {
+      if (d === 0) { const a = ri(2, 9), b = ri(2, 9), c = ri(1, a - 1 || 1), e = ri(1, 9);
+        const A = a - c, B = b + e; const fmt = (p, q) => `${p === 1 ? '' : p}a + ${q}b`;
+        return mcq(`Simplify ${a}a + ${b}b − ${c}a + ${e}b.`, fmt(A, B), [fmt(a + c, B), fmt(A, b - e), fmt(a + c, b - e), fmt(A + 1, B)], `${a}a − ${c}a = ${A}a; ${b}b + ${e}b = ${B}b<br>Answer: <b>${fmt(A, B)}</b>`); }
+      if (d === 1) { const k = ri(2, 5), p = ri(2, 4), q = ri(1, 9), r = ri(1, 9);
+        const c1 = -k * p + r, c0 = k * q;
+        const right = poly([c1, c0]);
+        return mcq(`Expand and simplify −${k}(${p}x − ${q}) + ${r}x.`, right, [poly([-k * p - r, c0]), poly([c1, -c0]), poly([k * p + r, -c0]), poly([c1, q])],
+          `−${k}(${p}x − ${q}) = −${k * p}x + ${k * q}<br>−${k * p}x + ${r}x = ${c1}x<br>Answer: <b>${right}</b>`); }
+      const a = ri(2, 5), b = ri(1, 6), c = ri(1, 4), e = ri(1, 6); // (ax - b)/2 - (cx - e)/3
+      const A = 3 * a - 2 * c, B = -3 * b + 2 * e; const right = `(${poly([A, B])}) / 6`;
+      return mcq(`Simplify (${a}x − ${b})/2 − (${c}x − ${e})/3.`, right, [`(${poly([3 * a + 2 * c, B])}) / 6`, `(${poly([A, -3 * b - 2 * e])}) / 6`, `(${poly([a - c, -b + e])}) / 5`, `(${poly([A, B])}) / 5`],
+        `Common denominator 6: [3(${a}x − ${b}) − 2(${c}x − ${e})] / 6<br>= (${3 * a}x − ${3 * b} − ${2 * c}x + ${2 * e}) / 6<br>= <b>${right}</b>`);
+    },
+    'Sec 1:Angles and polygons': d => {
+      if (d === 0) { const n = ri(5, 12); return num(`Find the sum of the interior angles of a ${n}-sided polygon, in degrees.`, (n - 2) * 180, `Sum = (n − 2) × 180° = (${n} − 2) × 180° = <b>${(n - 2) * 180}°</b>`, { unit: '°' }); }
+      if (d === 1) { const n = pick([5, 6, 8, 9, 10, 12, 15, 18, 20]); const ext = 360 / n;
+        return num(`Find the size of each interior angle of a regular ${n}-sided polygon, in degrees.`, 180 - ext, `Each exterior angle = 360° ÷ ${n} = ${ext}°<br>Interior angle = 180° − ${ext}° = <b>${180 - ext}°</b>`, { unit: '°' }); }
+      const k = pick([2, 3, 4, 5, 8, 9]); const ext = 180 / (k + 1), n = 360 / ext;
+      return num(`Each interior angle of a regular polygon is ${k} times the size of each exterior angle. How many sides does the polygon have?`, n,
+        `Interior + exterior = 180°, so ${k + 1} × exterior = 180°<br>Exterior = ${ext}°<br>n = 360° ÷ ${ext}° = <b>${n}</b>`);
+    },
+    'Sec 1:Percentage change': d => {
+      if (d === 0) { const A = 20 * ri(2, 20), p = pick([5, 10, 15, 20, 25, 30, 40, 50]), B = A * (100 + p) / 100;
+        return num(`A price increased from $${A} to $${B}. Find the percentage increase.`, p, `Increase = ${B} − ${A} = $${B - A}<br>% increase = ${B - A} ÷ ${A} × 100% = <b>${p}%</b>`, { unit: '%' }); }
+      if (d === 1) { const A = 40 * ri(2, 20), p = pick([5, 10, 12.5, 15, 20, 25, 30, 35]), B = A * (100 - p) / 100;
+        return num(`The number of visitors fell from ${A} to ${B}. Find the percentage decrease.`, p, `Decrease = ${A - B}<br>% decrease = ${A - B} ÷ ${A} × 100% = <b>${p}%</b>`, { unit: '%' }); }
+      const p = pick([10, 20, 25, 30, 40, 50]), q = pick([10, 20, 25, 30, 40]); const f = (1 + p / 100) * (1 - q / 100); const ch = r2((f - 1) * 100);
+      return num(`A shop raised a price by ${p}%, then reduced the new price by ${q}%. Find the overall percentage change. (Use a negative number for a decrease.)`, ch,
+        `Overall factor = ${1 + p / 100} × ${1 - q / 100} = ${r2(f * 10000) / 10000}<br>Change = (${r2(f * 10000) / 10000} − 1) × 100% = <b>${ch}%</b>`, { unit: '%', tol: 0.01 });
+    },
+    // ---------------- SECONDARY 2 ----------------
+    'Sec 2:Expansion and factorisation': d => {
+      if (d === 0) { const a = ri(-7, 7) || 2, b = ri(-7, 7) || -3; const right = poly([1, a + b, a * b]);
+        return mcq(`Expand (${poly([1, a])})(${poly([1, b])}).`, right, [poly([1, a * b, a + b]), poly([1, a - b, a * b]), poly([1, a + b, -a * b]), poly([1, -(a + b), a * b])],
+          `x·x + x·(${b}) + ${a}·x + ${a}·(${b})<br>= <b>${right}</b>`); }
+      if (d === 1) { const a = ri(2, 4), b = ri(1, 7), c = ri(1, 7); // (ax + b)(x - c)
+        const right = poly([a, b - a * c, -b * c]);
+        return mcq(`Expand (${a}x + ${b})(x − ${c}).`, right, [poly([a, a * c - b, -b * c]), poly([a, b - a * c, b * c]), poly([a, b + a * c, -b * c]), poly([a + 1, b - a * c, -b * c])],
+          `${a}x·x − ${a * c}x + ${b}x − ${b * c}<br>= <b>${right}</b>`); }
+      const p = pick([1, 2, 3]), q = ri(-6, 6) || 1, r = ri(-6, 6) || -2; // (px + q)(x + r)
+      const right = `(${poly([p, q])})(${poly([1, r])})`;
+      return mcq(`Factorise ${poly([p, p * r + q, q * r])} completely.`, right, [`(${poly([p, -q])})(${poly([1, -r])})`, `(${poly([p, r])})(${poly([1, q])})`, `(${poly([p, q])})(${poly([1, -r])})`, `(${poly([p, -r])})(${poly([1, q])})`],
+        `Look for two factors of ${p}x² and ${q * r} that make the middle term ${p * r + q}x.<br>(${poly([p, q])})(${poly([1, r])}) = ${p}x² + ${p * r}x + ${q}x + ${q * r} ✓<br>Answer: <b>${right}</b>`);
+    },
+    'Sec 2:Simultaneous equations': d => {
+      const x = ri(-5, 9), y = ri(-5, 9);
+      if (d === 0) return num(`Solve: x + y = ${x + y} and x − y = ${x - y}. Find x.`, x, `Add the equations: 2x = ${2 * x}<br>x = <b>${x}</b>`);
+      if (d === 1) { const a = ri(2, 5), b = ri(2, 5), c = ri(2, 5);
+        return num(`Solve: ${a}x + ${b}y = ${a * x + b * y} and ${c}x − y = ${c * x - y}. Find x.`, x,
+          `From the second: y = ${c}x${sgn(-(c * x - y))}<br>Substitute: ${a}x + ${b}(${c}x${sgn(-(c * x - y))}) = ${a * x + b * y}<br>${a + b * c}x = ${a * x + b * y + b * (c * x - y)}<br>x = <b>${x}</b>`); }
+      const a = ri(2, 6), b = ri(2, 6), c = ri(2, 6), e = ri(2, 6); if (a * e - b * c === 0) return G['Sec 2:Simultaneous equations'](2);
+      return num(`Solve: ${a}x + ${b}y = ${a * x + b * y} and ${c}x + ${e}y = ${c * x + e * y}. Find the value of x + y.`, x + y,
+        `Eliminate one unknown (multiply and subtract).<br>x = ${x}, y = ${y}<br>x + y = <b>${x + y}</b>`);
+    },
+    "Sec 2:Pythagoras' theorem": d => {
+      const T = pick([[3,4,5],[5,12,13],[8,15,17],[7,24,25],[6,8,10],[9,12,15],[20,21,29]]); const k = d === 2 ? 1 : ri(1, 3);
+      const [a, b, c] = T.map(v => v * k);
+      if (d === 0) return num(`A right-angled triangle has shorter sides ${a} cm and ${b} cm. Find the length of the hypotenuse in cm.`, c, `c² = ${a}² + ${b}² = ${a * a + b * b}<br>c = √${a * a + b * b} = <b>${c} cm</b>`, { unit: 'cm' });
+      if (d === 1) return num(`The hypotenuse of a right-angled triangle is ${c} cm and one side is ${a} cm. Find the other side in cm.`, b, `b² = ${c}² − ${a}² = ${c * c - a * a}<br>b = <b>${b} cm</b>`, { unit: 'cm' });
+      const L = ri(5, 9), h = ri(3, L - 1) + 0.5 * ri(0, 1); const foot = r2(Math.sqrt(L * L - h * h));
+      return num(`A ${L} m ladder leans against a wall. Its top reaches ${h} m up the wall. How far is the foot of the ladder from the wall? (Round to 2 d.p.)`, foot,
+        `d² = ${L}² − ${h}² = ${r2(L * L - h * h)}<br>d = √${r2(L * L - h * h)} = <b>${foot} m</b>`, { unit: 'm', tol: 0.01 });
+    },
+    'Sec 2:Probability': d => {
+      if (d === 0) { const r = ri(2, 9), b = ri(2, 9), g = ri(1, 6), t = r + b + g;
+        return num(`A bag has ${r} red, ${b} blue and ${g} green balls. One ball is picked at random. What is the probability it is blue? (Give a fraction.)`, b / t, `P(blue) = ${b}/${t} = <b>${fr(b, t)}</b>`, { tol: 0.001 }); }
+      if (d === 1) { const s = ri(3, 11); let n = 0; for (let i = 1; i <= 6; i++) for (let j = 1; j <= 6; j++) if (i + j === s) n++;
+        return num(`Two fair dice are thrown. What is the probability that the total is ${s}? (Give a fraction.)`, n / 36, `There are 36 equally likely outcomes; ${n} of them total ${s}.<br>P = ${n}/36 = <b>${fr(n, 36)}</b>`, { tol: 0.001 }); }
+      const r = ri(3, 7), b = ri(2, 6), t = r + b, p = r * (r - 1) / (t * (t - 1));
+      return num(`A box has ${r} red and ${b} blue pens. Two pens are taken out one after another without replacement. What is the probability both are red? (Give a fraction.)`, p,
+        `P = ${r}/${t} × ${r - 1}/${t - 1} = ${r * (r - 1)}/${t * (t - 1)} = <b>${fr(r * (r - 1), t * (t - 1))}</b>`, { tol: 0.001 });
+    },
+    'Sec 2:Quadratic equations': d => {
+      if (d === 0) { const r = ri(2, 15), k = ri(1, 4); return num(`Solve ${k === 1 ? '' : k}x² = ${k * r * r}. Give the positive solution.`, r, `x² = ${r * r}<br>x = ±${r}, so the positive solution is <b>${r}</b>`); }
+      if (d === 1) { const p = ri(-8, 8), q = ri(-8, 8); if (p === q) return G['Sec 2:Quadratic equations'](1);
+        const big = Math.max(p, q); return num(`Solve ${poly([1, -(p + q), p * q])} = 0. Give the larger solution.`, big,
+          `Factorise: (${poly([1, -p])})(${poly([1, -q])}) = 0<br>x = ${p} or x = ${q}<br>Larger solution: <b>${big}</b>`); }
+      const a = pick([2, 3]), n = ri(-5, 5) || 1, p = ri(-6, 6); // (a x - n)(x - p)
+      if (gcd(n, a) !== 1 || n / a === p) return G['Sec 2:Quadratic equations'](2);
+      const small = Math.min(n / a, p);
+      return num(`Solve ${poly([a, -(a * p + n), n * p])} = 0. Give the smaller solution (a fraction is fine).`, small,
+        `Factorise: (${poly([a, -n])})(${poly([1, -p])}) = 0<br>x = ${fr(n, a)} or x = ${p}<br>Smaller solution: <b>${small === p ? p : fr(n, a)}</b>`, { tol: 0.001 });
+    },
+  };
+  const LEVELS = {
+    'P6': ['Fractions', 'Percentage', 'Ratio', 'Speed', 'Algebra', 'Area and volume', 'Average'],
+    'Sec 1': ['Integers', 'Linear equations', 'Algebraic expressions', 'Angles and polygons', 'Percentage change'],
+    'Sec 2': ['Expansion and factorisation', 'Simultaneous equations', "Pythagoras' theorem", 'Probability', 'Quadratic equations'],
+  };
+  function make(level, topic, d) {
+    const t = topic === 'Mixed' ? pick(LEVELS[level]) : topic;
+    const q = G[`${level}:${t}`](d);
+    return Object.assign(q, { level, topic: t, diff: d, id: Math.random().toString(36).slice(2) });
+  }
+  // parse a typed answer: 12, -3.5, 3/4, 1 1/2, 25%, $40
+  function parse(s) {
+    s = String(s).trim().replace(/[$,\s]+$/g, '').replace(/^\$/, '').replace(/−/g, '-').replace(/,/g, '');
+    s = s.replace(/(cm³|cm²|cm|km\/h|km|min|m|°|ℓ)$/i, '').trim();
+    let pct = false; if (s.endsWith('%')) { pct = true; s = s.slice(0, -1).trim(); }
+    let v = NaN;
+    let m;
+    if ((m = s.match(/^(-?\d+)\s+(\d+)\s*\/\s*(\d+)$/))) { const w = +m[1]; v = Math.abs(w) + (+m[2]) / (+m[3]); if (w < 0 || m[1].startsWith('-')) v = -v; }
+    else if ((m = s.match(/^(-?\d*\.?\d+)\s*\/\s*(-?\d*\.?\d+)$/))) v = (+m[1]) / (+m[2]);
+    else if (/^-?\d*\.?\d+$/.test(s)) v = +s;
+    return v;
+  }
+  function check(q, input) {
+    if (q.choices) return +input === q.answer;
+    const v = parse(input); if (isNaN(v)) return false;
+    const tol = q.tol != null ? q.tol : 1e-6;
+    return Math.abs(v - q.answer) <= tol + 1e-9;
+  }
+  const answerText = q => q.choices ? q.choices[q.answer] : (Number.isInteger(q.answer) ? q.answer : r2(q.answer)) + (q.unit && q.unit !== '$' ? ' ' + q.unit : '');
+  return { LEVELS, make, check, parse, answerText, G };
+})();
+if (typeof module !== 'undefined') module.exports = Quiz;
+
+// ===== Reward games =====
+const Games = (() => {
+  const h = (html) => { const t = document.createElement('div'); t.innerHTML = html.trim(); return t.firstElementChild; };
+  const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  // swipe helper
+  function swipe(el, fn) {
+    let sx = 0, sy = 0, on = false;
+    el.addEventListener('pointerdown', e => { sx = e.clientX; sy = e.clientY; on = true; });
+    el.addEventListener('pointerup', e => { if (!on) return; on = false; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return; fn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')); });
+  }
+  const KEYDIR = { ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R', w: 'U', s: 'D', a: 'L', d: 'R' };
+
+  const list = [
+    // ---------- NUMBER RUSH ----------
+    { id: 'rush', name: 'Number Rush', emoji: '⚡', color: '#ff9a3c', desc: '60 seconds of quick mental maths. 10 tokens per correct answer.',
+      start(el, api) {
+        let score = 0, t = 60, cur, timer;
+        el.innerHTML = `<div class="gamebox"><div class="row"><span class="pill coin">Score <b id="rs">0</b></span><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="rt">60</b>s</span></div>
+          <div class="card" style="min-width:300px;text-align:center"><div class="big" id="rq" style="font-size:40px">…</div><div class="row" id="ra" style="justify-content:center;margin-top:14px"></div></div></div>`;
+        const gen = () => {
+          const op = ['+', '−', '×', '÷'][ri(0, 3)]; let a, b, ans;
+          if (op === '+') { a = ri(12, 99); b = ri(12, 99); ans = a + b; }
+          if (op === '−') { a = ri(30, 150); b = ri(5, a); ans = a - b; }
+          if (op === '×') { a = ri(3, 12); b = ri(3, 15); ans = a * b; }
+          if (op === '÷') { b = ri(2, 12); ans = ri(2, 15); a = b * ans; }
+          const opts = new Set([ans]); while (opts.size < 3) { const w = ans + ri(-10, 10); if (w !== ans && w >= 0) opts.add(w); }
+          cur = { text: `${a} ${op} ${b}`, ans, opts: shuffle([...opts]) };
+          el.querySelector('#rq').textContent = cur.text;
+          const ra = el.querySelector('#ra'); ra.innerHTML = '';
+          cur.opts.forEach(o => { const bt = h(`<button class="btn" style="font-size:24px;min-width:80px">${o}</button>`); bt.onclick = () => pickAns(o); ra.appendChild(bt); });
+        };
+        const pickAns = o => { if (o === cur.ans) { score++; } else { t = Math.max(0, t - 3); } el.querySelector('#rs').textContent = score; gen(); };
+        gen();
+        timer = setInterval(() => { t--; el.querySelector('#rt').textContent = t; if (t <= 0) { clearInterval(timer); api.end(score * 10, `You got ${score} right!`); } }, 1000);
+        return () => clearInterval(timer);
+      } },
+    // ---------- 2048 BLITZ ----------
+    { id: '2048', name: '2048 Blitz', emoji: '🔢', color: '#3aa0ff', desc: 'Merge tiles for 3 minutes. Reach 512 for 100 tokens, 1024 for 200.',
+      start(el, api) {
+        let g = Array(16).fill(0), t = 180, over = false;
+        el.innerHTML = `<div class="gamebox"><div class="row"><span class="pill coin">Best <b id="bt">0</b></span><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="tt">3:00</b></span><button class="btn sm ghost" id="stop">Cash out</button></div>
+          <div class="g2048" id="gb"></div><div class="dpad"><span></span><button data-d="U">↑</button><span></span><button data-d="L">←</button><button data-d="D">↓</button><button data-d="R">→</button></div></div>`;
+        const colors = { 0: '#e9e3fd', 2: '#fff', 4: '#fff4d6', 8: '#ffd27a', 16: '#ffb35c', 32: '#ff8f6b', 64: '#ff5d73', 128: '#a98bff', 256: '#8f76ff', 512: '#6c4cf5', 1024: '#3aa0ff', 2048: '#20bf8a' };
+        const add = () => { const e = g.map((v, i) => v ? -1 : i).filter(i => i >= 0); if (e.length) g[e[ri(0, e.length - 1)]] = Math.random() < 0.9 ? 2 : 4; };
+        const draw = () => { const gb = el.querySelector('#gb'); gb.innerHTML = g.map(v => `<div style="background:${colors[v] || '#231a4a'};color:${v >= 128 ? '#fff' : '#231a4a'};font-size:${v >= 1024 ? 20 : 26}px">${v || ''}</div>`).join(''); el.querySelector('#bt').textContent = Math.max(...g); };
+        const line = arr => { const a = arr.filter(v => v); for (let i = 0; i < a.length - 1; i++) if (a[i] === a[i + 1]) { a[i] *= 2; a.splice(i + 1, 1); } while (a.length < 4) a.push(0); return a; };
+        const move = d => {
+          if (over) return; const before = g.join();
+          for (let k = 0; k < 4; k++) {
+            let idx = [];
+            for (let j = 0; j < 4; j++) idx.push(d === 'L' ? k * 4 + j : d === 'R' ? k * 4 + 3 - j : d === 'U' ? j * 4 + k : (3 - j) * 4 + k);
+            const nl = line(idx.map(i => g[i])); idx.forEach((i, j) => g[i] = nl[j]);
+          }
+          if (g.join() !== before) { add(); draw(); }
+          const can = g.some(v => !v) || g.some((v, i) => (i % 4 < 3 && v === g[i + 1]) || (i < 12 && v === g[i + 4]));
+          if (!can) finish('No moves left!');
+        };
+        const reward = m => m >= 2048 ? 500 : m >= 1024 ? 200 : m >= 512 ? 100 : m >= 256 ? 50 : m >= 128 ? 20 : 0;
+        const finish = msg => { if (over) return; over = true; clearInterval(timer); const m = Math.max(...g); api.end(reward(m), `${msg} Best tile: ${m}.`); };
+        add(); add(); draw();
+        const onKey = e => { const d = KEYDIR[e.key]; if (d) { e.preventDefault(); move(d); } };
+        document.addEventListener('keydown', onKey);
+        swipe(el.querySelector('#gb'), move);
+        el.querySelectorAll('.dpad button').forEach(b => b.onclick = () => move(b.dataset.d));
+        el.querySelector('#stop').onclick = () => finish('Cashed out.');
+        const timer = setInterval(() => { t--; el.querySelector('#tt').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; if (t <= 0) finish("Time's up!"); }, 1000);
+        return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
+      } },
+    // ---------- MINESWEEPER ----------
+    { id: 'mines', name: 'Minesweeper', emoji: '💣', color: '#231a4a', desc: 'Clear the field. +50 tokens per bomb avoided if you win, −100 if you blow up.',
+      start(el, api) {
+        const W = 9, H = 9, B = 10; let bombs = null, open = new Set(), flags = new Set(), over = false, flagMode = false;
+        el.innerHTML = `<div class="gamebox"><div class="row"><span class="pill coin">💣 <b>${B}</b></span><span class="pill" style="background:#efeafe;color:#6c4cf5">🚩 <b id="fc">0</b></span><button class="btn sm ghost" id="fm">Mode: dig ⛏</button></div>
+          <div class="mines" id="mb" style="grid-template-columns:repeat(${W},34px)"></div><div class="muted small">Right-click or switch to flag mode to place a flag.</div></div>`;
+        const nb = i => { const r = Math.floor(i / W), c = i % W, out = []; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < H && cc >= 0 && cc < W) out.push(rr * W + cc); } return out; };
+        const cnt = i => nb(i).filter(j => bombs.has(j)).length;
+        const place = safe => { bombs = new Set(); const no = new Set([safe, ...nb(safe)]); while (bombs.size < B) { const k = ri(0, W * H - 1); if (!no.has(k)) bombs.add(k); } };
+        const mb = el.querySelector('#mb');
+        const cols = ['', '#3aa0ff', '#20bf8a', '#ff5d73', '#6c4cf5', '#d97a00', '#0aa', '#231a4a', '#999'];
+        const draw = (reveal) => {
+          mb.innerHTML = '';
+          for (let i = 0; i < W * H; i++) {
+            const b = document.createElement('button');
+            if (open.has(i) || (reveal && bombs && bombs.has(i))) {
+              b.className = 'open';
+              if (bombs && bombs.has(i)) { b.textContent = '💣'; if (reveal === i) b.className = 'open boom'; }
+              else { const n = cnt(i); b.textContent = n || ''; b.style.color = cols[n]; }
+            } else if (flags.has(i)) b.textContent = '🚩';
+            b.onclick = () => act(i, flagMode);
+            b.oncontextmenu = e => { e.preventDefault(); act(i, true); };
+            mb.appendChild(b);
+          }
+          el.querySelector('#fc').textContent = flags.size;
+        };
+        const flood = i => { const st = [i]; while (st.length) { const k = st.pop(); if (open.has(k) || flags.has(k)) continue; open.add(k); if (cnt(k) === 0) nb(k).forEach(j => { if (!open.has(j)) st.push(j); }); } };
+        const act = (i, flag) => {
+          if (over || open.has(i)) return;
+          if (flag) { flags.has(i) ? flags.delete(i) : flags.add(i); return draw(); }
+          if (flags.has(i)) return;
+          if (!bombs) place(i);
+          if (bombs.has(i)) { over = true; draw(i); setTimeout(() => api.end(-100, 'BOOM! You hit a bomb.'), 700); return; }
+          flood(i); draw();
+          if (open.size === W * H - B) { over = true; draw(-1); setTimeout(() => api.end(B * 50, `Field cleared! ${B} bombs avoided.`), 500); }
+        };
+        el.querySelector('#fm').onclick = e => { flagMode = !flagMode; e.target.textContent = flagMode ? 'Mode: flag 🚩' : 'Mode: dig ⛏'; };
+        draw();
+        return () => {};
+      } },
+    // ---------- SNAKE ----------
+    { id: 'snake', name: 'Snake Arena', emoji: '🐍', color: '#20bf8a', desc: 'Eat apples, grow longer, avoid walls and yourself. 10 tokens per apple.',
+      start(el, api) {
+        const N = 20, S = 18; let snake = [{ x: 10, y: 10 }, { x: 9, y: 10 }, { x: 8, y: 10 }], dir = 'R', next = 'R', food, over = false, eaten = 0;
+        el.innerHTML = `<div class="gamebox"><div class="row"><span class="pill coin">🍎 <b id="se">0</b></span></div><canvas id="sc" width="${N * S}" height="${N * S}" style="background:#1d1540"></canvas>
+          <div class="dpad"><span></span><button data-d="U">↑</button><span></span><button data-d="L">←</button><button data-d="D">↓</button><button data-d="R">→</button></div></div>`;
+        const cv = el.querySelector('#sc'), cx = cv.getContext('2d');
+        const putFood = () => { do { food = { x: ri(0, N - 1), y: ri(0, N - 1) }; } while (snake.some(s => s.x === food.x && s.y === food.y)); };
+        putFood();
+        const opp = { U: 'D', D: 'U', L: 'R', R: 'L' };
+        const turn = d => { if (d !== opp[dir]) next = d; };
+        const step = () => {
+          if (over) return; dir = next;
+          const hd = { x: snake[0].x + (dir === 'R') - (dir === 'L'), y: snake[0].y + (dir === 'D') - (dir === 'U') };
+          if (hd.x < 0 || hd.y < 0 || hd.x >= N || hd.y >= N || snake.some(s => s.x === hd.x && s.y === hd.y)) { over = true; clearInterval(timer); return api.end(eaten * 10, `Crash! You ate ${eaten} apples.`); }
+          snake.unshift(hd);
+          if (hd.x === food.x && hd.y === food.y) { eaten++; el.querySelector('#se').textContent = eaten; putFood(); } else snake.pop();
+          cx.fillStyle = '#1d1540'; cx.fillRect(0, 0, N * S, N * S);
+          cx.fillStyle = '#ff5d73'; cx.beginPath(); cx.arc(food.x * S + S / 2, food.y * S + S / 2, S / 2 - 2, 0, 7); cx.fill();
+          snake.forEach((s, i) => { cx.fillStyle = i ? '#20bf8a' : '#ffc93c'; cx.fillRect(s.x * S + 1, s.y * S + 1, S - 2, S - 2); });
+        };
+        const onKey = e => { const d = KEYDIR[e.key]; if (d) { e.preventDefault(); turn(d); } };
+        document.addEventListener('keydown', onKey);
+        swipe(cv, turn);
+        el.querySelectorAll('.dpad button').forEach(b => b.onclick = () => turn(b.dataset.d));
+        const timer = setInterval(step, 130);
+        return () => { clearInterval(timer); document.removeEventListener('keydown', onKey); };
+      } },
+    // ---------- MEMORY MATCH ----------
+    { id: 'memory', name: 'Memory Match', emoji: '🃏', color: '#ff5d73', desc: 'Match fractions with decimals and percentages. Faster = more tokens.',
+      start(el, api) {
+        const pairs = [['1/2', '0.5'], ['1/4', '25%'], ['3/4', '0.75'], ['1/5', '20%'], ['2/5', '0.4'], ['3/8', '0.375'], ['1/10', '10%'], ['7/10', '70%']];
+        const cards = shuffle(pairs.flatMap((p, i) => [{ v: p[0], k: i }, { v: p[1], k: i }]));
+        let up = [], done = new Set(), t0 = Date.now(), lock = false, moves = 0;
+        el.innerHTML = `<div class="gamebox"><div class="row"><span class="pill coin">Moves <b id="mm">0</b></span><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="mt">0</b>s</span></div><div class="mem" id="mg"></div></div>`;
+        const mg = el.querySelector('#mg');
+        const draw = () => { mg.innerHTML = ''; cards.forEach((c, i) => { const b = document.createElement('button'); const shown = up.includes(i) || done.has(c.k); b.className = done.has(c.k) ? 'done' : shown ? 'up' : ''; b.textContent = shown ? c.v : '?'; b.onclick = () => flip(i); mg.appendChild(b); }); };
+        const flip = i => {
+          if (lock || up.includes(i) || done.has(cards[i].k)) return;
+          up.push(i); draw();
+          if (up.length === 2) {
+            moves++; el.querySelector('#mm').textContent = moves; lock = true;
+            setTimeout(() => {
+              if (cards[up[0]].k === cards[up[1]].k) done.add(cards[up[0]].k);
+              up = []; lock = false; draw();
+              if (done.size === pairs.length) { clearInterval(timer); const s = Math.round((Date.now() - t0) / 1000); api.end(s < 45 ? 150 : s < 75 ? 100 : 50, `All matched in ${s}s and ${moves} moves!`); }
+            }, 650);
+          }
+        };
+        draw();
+        const timer = setInterval(() => el.querySelector('#mt').textContent = Math.round((Date.now() - t0) / 1000), 500);
+        return () => clearInterval(timer);
+      } },
+  ];
+  return { list };
+})();
+
+// ===== App =====
+(() => {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const today = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  const yesterday = () => { const d = new Date(Date.now() - 864e5); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+  const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const fmt = n => Math.round(n).toLocaleString('en-SG');
+
+  // ---------- catalog ----------
+  const DIFF = [
+    { name: 'Easy', tokens: 1200, secs: 45, mins: 10, blurb: 'One concept, one step' },
+    { name: 'Medium', tokens: 2500, secs: 90, mins: 10, blurb: 'Two or three steps, word problems' },
+    { name: 'Hard', tokens: 4200, secs: 180, mins: 15, blurb: 'Multi-step problem sums' },
+  ];
+  const SABS = {
+    ink: { name: 'Ink Splat', e: '🎨', cost: 150, desc: 'Paint splats cover the question until they tap them away' },
+    flip: { name: 'Upside Down', e: '🙃', cost: 200, desc: 'The question flips upside down' },
+    freeze: { name: 'Freeze', e: '🧊', cost: 250, desc: 'Answer buttons freeze for 3 seconds' },
+    shuffle: { name: 'Shuffle', e: '🔀', cost: 250, desc: 'Keypad and options scramble for 2 questions' },
+    fog: { name: 'Fog', e: '🌫️', cost: 300, desc: 'The question blurs; they rub to clear it' },
+    glitch: { name: 'Glitch Theme', e: '💖', cost: 400, desc: 'Pink comic-font quiz for 3 questions' },
+    boss: { name: 'Boss Fight', e: '👾', cost: 7000, desc: 'Quiz pauses and the Calculator King attacks for 12 seconds' },
+  };
+  const MSGS = ['Good luck! 🍀', "Bet you can't beat my score 😏", 'GG 🤝', 'Study harder! 📚', 'You got this 💪', 'Nice try 😂', 'Race you to 10/10 🏁'];
+  const STICKERS = ['🐔', '🔥', '👻', '🦆', '💥', '🍕', '🤡', '🐸'];
+  const MSG_COST = 500, STICKER_COST = 1000, SHIELD_COST = 200, HINT_COST = 300;
+  const AVATARS = [['🦊', 0], ['🐼', 200], ['🐸', 300], ['🐧', 400], ['🦄', 500], ['🐙', 800], ['🐉', 1000], ['🤖', 1500], ['👑', 3000], ['🦖', 5000]];
+  const DRAW_PENALTY = 10000;
+  const CHESS = { 1: ['Pawn', 'Beginner', 1000], 2: ['Knight', 'Casual, ~800', 2000], 3: ['Bishop', 'Club beginner, ~1200', 4000], 4: ['Rook', 'Strong club, ~1600', 7000], 5: ['Queen', 'Expert', 12000] };
+
+  // ---------- state ----------
+  const blank = () => ({ v: 1, name: '', avatar: '🦊', owned: ['🦊'], tokens: 0, arcadeMs: 0, shields: 1, botRivals: true,
+    streak: { last: '', n: 0 }, day: { date: today(), easy: 0, quizzes: 0 }, mastery: {}, review: [],
+    stats: { quizzes: 0, correct: 0, total: 0, cw: 0, cl: 0, cd: 0 }, level: 'P6', savedAt: 0 });
+  let S = blank();
+  const Store = {
+    db: null, doc: null, timer: null,
+    load() { try { const raw = localStorage.getItem('mathquest'); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch (e) {} this.fixDay(); },
+    fixDay() { if (S.day.date !== today()) S.day = { date: today(), easy: 0, quizzes: 0 }; },
+    save() { S.savedAt = Date.now(); try { localStorage.setItem('mathquest', JSON.stringify(S)); } catch (e) {}
+      clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.doc) { try { const p = this.doc.set(JSON.parse(JSON.stringify(S))); if (p && p.catch) p.catch(() => {}); } catch (e) {} } }, 1200); },
+    async connect() {
+      try {
+        if (!window.claude || !claude.use) return;
+        const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
+        if (user && !S.name) { try { const me = await user.me(); if (me && me.name) { S.name = me.name.split(' ')[0]; Store.save(); Net.updatePresence(); renderHud(); } } catch (e) {} }
+        if (!db || !user) return;
+        const id = await user.id(); if (!id) return;
+        this.doc = db.collection('data/users/' + id).doc('state');
+        let data = null;
+        try { const snap = await this.doc.get(); data = snap && (typeof snap.data === 'function' ? snap.data() : (snap.data !== undefined ? snap.data : snap)); } catch (e) {}
+        if (data && data.v && (data.savedAt || 0) > (S.savedAt || 0)) { S = Object.assign(blank(), data); this.fixDay(); renderHud(); route(cur, true); }
+        else this.save();
+      } catch (e) { this.doc = null; }
+    },
+  };
+
+  // ---------- toasts / HUD ----------
+  function toast(text, kind = '') { const t = document.createElement('div'); t.className = 'toast ' + kind; t.innerHTML = text; $('#toasts').appendChild(t); setTimeout(() => t.remove(), 4200); }
+  function addTokens(n, why) {
+    if (!n) return;
+    S.tokens = Math.max(0, S.tokens + n); Store.save(); renderHud();
+    const p = $('#hudTokens'); p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump');
+    if (why) toast(`${n > 0 ? '+' : ''}${fmt(n)} 🪙 ${why}`, n > 0 ? 'good' : 'bad');
+  }
+  function spend(n) { if (S.tokens < n) { toast(`You need ${fmt(n)} 🪙 — you have ${fmt(S.tokens)}. Do a quiz!`, 'bad'); return false; } S.tokens -= n; Store.save(); renderHud(); return true; }
+  function renderHud() {
+    $('#hudTokens span').textContent = fmt(S.tokens);
+    $('#hudArcade span').textContent = mmss(S.arcadeMs);
+    $('#hudMe').textContent = `${S.avatar} ${S.name || 'Player'}`;
+  }
+
+  // ---------- routing ----------
+  const TABS = [['study', '📚 Study'], ['arcade', '🕹️ Arcade'], ['chess', '♞ Chess'], ['friends', '👥 Friends'], ['shop', '🛍️ Shop']];
+  let cur = 'study', cleanup = null, locked = false;
+  function renderTabs() {
+    $('#tabs').innerHTML = TABS.map(([id, label]) => `<button class="tab ${cur === id ? 'on' : ''}" data-t="${id}" ${locked && cur !== id ? 'disabled' : ''}>${label}</button>`).join('');
+    $$('#tabs .tab').forEach(b => b.onclick = () => route(b.dataset.t));
+  }
+  function route(id, force) {
+    if (locked && !force) return;
+    if (cleanup) { cleanup(); cleanup = null; }
+    cur = id; renderTabs(); window.scrollTo(0, 0);
+    ({ study: viewStudy, arcade: viewArcade, chess: viewChess, friends: viewFriends, shop: viewShop })[id]();
+    Net.updatePresence();
+  }
+  function modal(html) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="card">${html}</div>`; document.body.appendChild(m); return m; }
+
+  // =====================================================================
+  // STUDY
+  // =====================================================================
+  let pickTopic = 'Mixed', pickDiff = 1, timed = true;
+  function mastery(level, topic) {
+    const m = S.mastery[`${level}:${topic}`]; if (!m || !m.t) return { pct: 0, label: 'New' };
+    const pct = Math.round(100 * m.c / m.t); return { pct, label: m.t >= 10 && pct >= 85 ? 'Mastered' : pct >= 60 ? 'Practising' : 'Learning' };
+  }
+  function viewStudy() {
+    const lv = S.level, topics = Quiz.LEVELS[lv];
+    if (pickTopic !== 'Mixed' && !topics.includes(pickTopic)) pickTopic = 'Mixed';
+    $('#view').innerHTML = `
+      <div class="grid g2" style="margin-bottom:14px">
+        <div class="card"><h2>Hi ${esc(S.name || 'there')} ${S.avatar}</h2>
+          <div class="row"><span class="tag">🔥 Streak: ${S.streak.n} day${S.streak.n === 1 ? '' : 's'}</span><span class="tag">✅ ${S.stats.quizzes} quizzes</span><span class="tag">🛡️ ${S.shields} shield${S.shields === 1 ? '' : 's'}</span></div>
+          <p class="muted small" style="margin:10px 0 0">Finish a quiz with 5/10 or better to earn tokens and Arcade time. Spend tokens on chess hints, avatars, and sabotaging your friends.</p></div>
+        <div class="card"><h3>🔁 Review list</h3><p class="muted small" style="margin:0 0 10px">${S.review.length ? `${S.review.length} question${S.review.length === 1 ? '' : 's'} you got wrong. Get each right twice to clear it.` : 'Questions you get wrong land here.'}</p>
+          <button class="btn ghost" id="reviewBtn" ${S.review.length ? '' : 'disabled'}>Practise review (${Math.min(10, S.review.length)})</button></div>
+      </div>
+      <div class="card">
+        <h2>Start a quiz</h2>
+        <div class="row" style="margin-bottom:14px">${Object.keys(Quiz.LEVELS).map(l => `<button class="chip ${l === lv ? 'on' : ''}" data-lv="${l}">${l}</button>`).join('')}</div>
+        <h3>Topic</h3>
+        <div class="grid g3" style="margin-bottom:16px">
+          <button class="topic ${pickTopic === 'Mixed' ? 'on' : ''}" data-tp="Mixed">🎲 Mixed<div class="muted small">All ${lv} topics</div></button>
+          ${topics.map(t => { const m = mastery(lv, t); return `<button class="topic ${pickTopic === t ? 'on' : ''}" data-tp="${esc(t)}">${esc(t)}<div class="muted small">${m.label}${m.pct ? ` · ${m.pct}%` : ''}</div><div class="bar"><i style="width:${m.pct}%"></i></div></button>`; }).join('')}
+        </div>
+        <h3>Difficulty</h3>
+        <div class="grid g3" style="margin-bottom:16px">${DIFF.map((d, i) => `<button class="diff d${i} ${pickDiff === i ? 'on' : ''}" data-df="${i}"><div class="big">${d.name}</div><div class="small">${d.blurb}</div><div style="margin-top:8px">🪙 ${d.tokens} · ⏱ +${d.mins} min · ${d.secs}s/question</div></button>`).join('')}</div>
+        <div class="row" style="justify-content:space-between">
+          <label class="switch"><input type="checkbox" id="timedBox" ${timed ? 'checked' : ''}> Timer on</label>
+          <button class="btn green" id="go" style="font-size:20px;padding:14px 28px">Start 10 questions ▶</button>
+        </div>
+      </div>`;
+    $$('[data-lv]').forEach(b => b.onclick = () => { S.level = b.dataset.lv; Store.save(); viewStudy(); });
+    $$('[data-tp]').forEach(b => b.onclick = () => { pickTopic = b.dataset.tp; viewStudy(); });
+    $$('[data-df]').forEach(b => b.onclick = () => { pickDiff = +b.dataset.df; viewStudy(); });
+    $('#timedBox').onchange = e => timed = e.target.checked;
+    $('#go').onclick = () => startQuiz(false);
+    $('#reviewBtn').onclick = () => startQuiz(true);
+  }
+
+  // =====================================================================
+  // QUIZ ENGINE
+  // =====================================================================
+  let QZ = null;
+  function startQuiz(review) {
+    let qs;
+    if (review) qs = S.review.slice(0, 10).map(q => Object.assign({}, q));
+    else qs = Array.from({ length: 10 }, () => Quiz.make(S.level, pickTopic, pickDiff));
+    QZ = { review, level: S.level, topic: pickTopic, diff: review ? 1 : pickDiff, timed, qs, i: 0, log: [], paused: 0, timeLeft: 0, startT: Date.now(), shuffleLeft: 0, glitchLeft: 0, applied: false, entry: '' };
+    locked = true; renderTabs(); Net.updatePresence();
+    showQuestion();
+    QZ.tick = setInterval(tick, 250);
+    cleanup = () => { clearInterval(QZ && QZ.tick); };
+  }
+  function tick() {
+    if (!QZ || !QZ.timed || QZ.paused > 0 || QZ.answered) return;
+    QZ.timeLeft -= 250;
+    const secs = DIFF[QZ.qs[QZ.i].diff ?? QZ.diff].secs * 1000;
+    const bar = $('#tbar'); if (bar) bar.style.width = Math.max(0, 100 * QZ.timeLeft / secs) + '%';
+    if (QZ.timeLeft <= 0) submit(null);
+  }
+  function showQuestion() {
+    const q = QZ.qs[QZ.i]; QZ.answered = false; QZ.applied = false; QZ.entry = '';
+    QZ.timeLeft = DIFF[q.diff ?? QZ.diff].secs * 1000; QZ.qStart = Date.now();
+    if (QZ.shuffleLeft > 0) QZ.shuffleLeft--;
+    if (QZ.glitchLeft > 0) { QZ.glitchLeft--; if (!QZ.glitchLeft) document.body.classList.remove('glitch'); }
+    const shuffled = QZ.shuffleLeft > 0;
+    $('#view').innerHTML = `
+      <div class="qwrap">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px"><b class="big" style="font-size:20px">Question ${QZ.i + 1} of ${QZ.qs.length}</b><button class="btn sm ghost" id="quit">Quit</button></div>
+        <div class="dots">${QZ.qs.map((_, k) => `<i class="${k < QZ.i ? (QZ.log[k].ok ? 'ok' : 'no') : k === QZ.i ? 'cur' : ''}"></i>`).join('')}</div>
+        ${QZ.timed ? '<div class="timer"><i id="tbar" style="width:100%"></i></div>' : ''}
+        <div class="card" id="qcard">
+          <div class="qmeta"><span class="tag">${esc(q.level)}</span><span class="tag">${esc(q.topic)}</span><span class="tag">${DIFF[q.diff ?? QZ.diff].name}</span>${QZ.review ? '<span class="tag">Review</span>' : ''}</div>
+          <div class="qtext">${q.text}</div>
+        </div>
+        <div class="card" id="answerArea" style="margin-top:12px">${answerUI(q, shuffled)}</div>
+      </div>`;
+    $('#quit').onclick = () => {
+      const m = modal(`<h2>Quit this quiz?</h2><p class="muted">You won't get tokens or Arcade time for it.</p><div class="row"><button class="btn red" id="yq">Quit</button><button class="btn ghost" id="nq">Keep going</button></div>`);
+      QZ.paused++;
+      $('#yq', m).onclick = () => { m.remove(); endQuizCleanup(); route('study', true); };
+      $('#nq', m).onclick = () => { m.remove(); QZ.paused--; };
+    };
+    bindAnswer(q);
+    // pending sabotages from friends, then bot rivals
+    Sab.queue = Sab.queue.filter(s => s.exp > Date.now());
+    if (Sab.queue.length) { const s = Sab.queue.shift(); setTimeout(() => Sab.apply(s.type, s.from), 600); }
+    else if (S.botRivals && QZ.i >= 1 && Math.random() < 0.15) setTimeout(() => { if (QZ && !QZ.applied && !QZ.answered) Sab.apply(pick(['ink', 'flip', 'fog', 'shuffle', 'freeze']), 'RoboRival 🤖', true); }, 1500 + Math.random() * 3000);
+  }
+  function answerUI(q, shuffled) {
+    if (q.choices) {
+      const order = q.choices.map((_, i) => i); if (shuffled) order.sort(() => Math.random() - 0.5);
+      return `<div class="choices">${order.map(i => `<button class="choice" data-c="${i}">${'ABCD'[order.indexOf(i)]}. ${esc(q.choices[i])}</button>`).join('')}</div>`;
+    }
+    let keys = ['7', '8', '9', '/', '⌫', '4', '5', '6', '.', '−', '1', '2', '3', '0', '%'];
+    if (shuffled) keys = keys.sort(() => Math.random() - 0.5);
+    return `<div class="ansrow"><input id="ans" inputmode="decimal" autocomplete="off" placeholder="Your answer${q.unit ? ` (${esc(q.unit)})` : ''}"><button class="btn green" id="sub">Check ✓</button></div>
+      <div class="keypad">${keys.map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}</div>
+      <div class="muted small" style="margin-top:8px">Fractions like 3/4 or 1 1/2 are fine.</div>`;
+  }
+  function bindAnswer(q) {
+    if (q.choices) { $$('.choice').forEach(b => b.onclick = () => submit(b.dataset.c)); return; }
+    const inp = $('#ans');
+    if (window.matchMedia('(pointer:fine)').matches) inp.focus();
+    inp.onkeydown = e => { if (e.key === 'Enter') submit(inp.value); };
+    $('#sub').onclick = () => submit(inp.value);
+    $$('.key').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === '⌫') inp.value = inp.value.slice(0, -1); else inp.value += k === '−' ? '-' : k; });
+  }
+  function submit(val) {
+    if (!QZ || QZ.answered) return;
+    if (val !== null && !QZ.qs[QZ.i].choices && String(val).trim() === '') { toast('Type an answer first'); return; }
+    QZ.answered = true;
+    const q = QZ.qs[QZ.i], ok = val !== null && Quiz.check(q, val);
+    QZ.log.push({ q, given: val, ok, ms: Date.now() - QZ.qStart });
+    const f = document.createElement('div'); f.className = 'flash'; f.textContent = ok ? '✅' : (val === null ? '⏰' : '❌'); $('#qcard').appendChild(f);
+    setTimeout(() => { if (!QZ) return; QZ.i++; if (QZ.i >= QZ.qs.length) finishQuiz(); else showQuestion(); }, 750);
+  }
+  function endQuizCleanup() { if (QZ) clearInterval(QZ.tick); QZ = null; locked = false; document.body.classList.remove('glitch'); Sab.closeBoss(); renderTabs(); }
+  function finishQuiz() {
+    const z = QZ; endQuizCleanup(); cleanup = null;
+    Store.fixDay();
+    const correct = z.log.filter(l => l.ok).length, n = z.log.length;
+    const avgMs = z.log.reduce((a, l) => a + l.ms, 0) / n;
+    const lines = []; let tokens = 0, arcade = 0;
+    // mastery + review
+    for (const l of z.log) {
+      const k = `${l.q.level}:${l.q.topic}`; const m = S.mastery[k] || { c: 0, t: 0 }; m.t++; if (l.ok) m.c++; S.mastery[k] = m;
+      if (z.review) { const r = S.review.find(x => x.id === l.q.id); if (r) { if (l.ok) r.hits = (r.hits || 0) + 1; } }
+      else if (!l.ok) { const keep = Object.assign({}, l.q, { hits: 0 }); S.review.unshift(keep); }
+    }
+    const cleared = z.review ? S.review.filter(r => (r.hits || 0) >= 2).length : 0;
+    if (z.review) S.review = S.review.filter(r => (r.hits || 0) < 2);
+    S.review = S.review.slice(0, 60);
+    S.stats.quizzes++; S.stats.correct += correct; S.stats.total += n; S.day.quizzes++;
+    let paid = true;
+    if (correct < 5) { paid = false; lines.push(['Score below 5/10 — no tokens this time', 0]); }
+    else if (avgMs < 3000) { paid = false; lines.push(['Answered too fast to count — no tokens', 0]); }
+    if (paid) {
+      let base = z.review ? 1500 : DIFF[z.diff].tokens;
+      if (!z.review && z.diff === 0) { S.day.easy++; if (S.day.easy > 3) { base = Math.round(base / 2); lines.push([`Easy quiz #${S.day.easy} today (half pay)`, base]); } else lines.push([`${DIFF[z.diff].name} quiz`, base]); }
+      else lines.push([z.review ? 'Review quiz' : `${DIFF[z.diff].name} quiz`, base]);
+      tokens += base;
+      if (correct === n) { tokens += 1000; lines.push(['Perfect score bonus', 1000]); }
+      if (S.streak.last !== today()) { S.streak.n = S.streak.last === yesterday() ? S.streak.n + 1 : 1; S.streak.last = today(); const sb = Math.min(S.streak.n, 5) * 500; tokens += sb; lines.push([`Daily streak (${S.streak.n} day${S.streak.n === 1 ? '' : 's'})`, sb]); }
+      arcade = (z.diff === 2 ? 15 : 10) * 60000;
+      S.arcadeMs = Math.min(30 * 60000, S.arcadeMs + arcade);
+    }
+    S.tokens += tokens; Store.save(); renderHud(); Net.updatePresence();
+    const wrong = z.log.filter(l => !l.ok);
+    $('#view').innerHTML = `
+      <div class="qwrap">
+        <div class="card" style="text-align:center;margin-bottom:12px">
+          <div style="font-size:56px">${correct === n ? '🏆' : correct >= 8 ? '🌟' : correct >= 5 ? '👍' : '💪'}</div>
+          <h2 style="font-size:34px;margin:4px 0">${correct} / ${n}</h2>
+          <div class="muted">${esc(z.review ? 'Review' : `${z.level} · ${z.topic} · ${DIFF[z.diff].name}`)} · ${Math.round(avgMs / 1000)}s per question${cleared ? ` · ${cleared} cleared from review` : ''}</div>
+        </div>
+        <div class="card" style="margin-bottom:12px"><h3>You earned</h3>
+          ${lines.map(([t, v]) => `<div class="earn"><span>${esc(t)}</span><span>${v ? '🪙 ' + fmt(v) : ''}</span></div>`).join('')}
+          <div class="earn" style="border:0;font-size:18px"><span>Total</span><span>🪙 ${fmt(tokens)}${arcade ? ` · ⏱ +${arcade / 60000} min Arcade` : ''}</span></div>
+        </div>
+        ${wrong.length ? `<div class="card" style="margin-bottom:12px"><h3>Worked solutions</h3>${wrong.map(l => `<div class="sol"><div style="font-weight:700">${l.q.text}</div><div class="small muted">Your answer: ${l.given === null ? 'ran out of time' : esc(l.q.choices ? l.q.choices[+l.given] : l.given)} · Correct: <span class="ans">${esc(Quiz.answerText(l.q))}</span></div><div style="margin-top:6px">${l.q.sol}</div></div>`).join('')}</div>` : ''}
+        <div class="row"><button class="btn green" id="again">Another quiz</button><button class="btn yellow" id="toArc" ${S.arcadeMs > 0 ? '' : 'disabled'}>🕹️ Arcade (${mmss(S.arcadeMs)})</button><button class="btn ghost" id="toChess">♞ Chess</button></div>
+      </div>`;
+    $('#again').onclick = () => route('study');
+    $('#toArc').onclick = () => route('arcade');
+    $('#toChess').onclick = () => route('chess');
+    if (tokens) { const p = $('#hudTokens'); p.classList.remove('bump'); void p.offsetWidth; p.classList.add('bump'); }
+  }
+
+  // =====================================================================
+  // SABOTAGE EFFECTS
+  // =====================================================================
+  const Sab = {
+    queue: [], boss: null,
+    incoming(type, from) {
+      if (QZ && !QZ.answered) this.apply(type, from);
+      else { this.queue.push({ type, from, exp: Date.now() + 600000 }); this.queue = this.queue.filter(s => s.exp > Date.now()).slice(-5); if (!QZ) toast(`${SABS[type].e} ${esc(from)} sent you ${SABS[type].name}! It hits in your next quiz 😈`, 'bad'); }
+    },
+    banner(text) { const b = document.createElement('div'); b.className = 'sabbanner'; b.innerHTML = text; document.body.appendChild(b); setTimeout(() => b.remove(), 2600); },
+    apply(type, from, bot) {
+      if (!QZ) return; QZ.applied = true;
+      const s = SABS[type]; this.banner(`${s.e} ${esc(from)} hit you with <b>${s.name}</b>!`);
+      const card = $('#qcard'), area = $('#answerArea'); if (!card) return;
+      if (type === 'ink') {
+        const cols = ['#ff5d73', '#3aa0ff', '#20bf8a', '#ffc93c', '#6c4cf5', '#ff9a3c'];
+        for (let k = 0; k < 7; k++) {
+          const sz = 70 + Math.random() * 90, sp = document.createElement('div'); sp.className = 'splat';
+          const c = pick(cols);
+          Object.assign(sp.style, { width: sz + 'px', height: sz * (0.8 + Math.random() * 0.4) + 'px', left: Math.random() * 80 + '%', top: Math.random() * 60 + '%', background: `radial-gradient(circle at 40% 40%, ${c} 55%, ${c}cc 62%, transparent 70%)`, transform: `translate(-30%,-20%) rotate(${Math.random() * 360}deg)` });
+          sp.onpointerdown = () => sp.remove(); card.appendChild(sp);
+        }
+      }
+      if (type === 'flip') {
+        card.classList.add('flipped');
+        const fb = document.createElement('button'); fb.className = 'btn sm yellow flipback'; fb.textContent = '🙃 Flip back';
+        fb.onclick = () => { card.classList.remove('flipped'); fb.remove(); };
+        $('.qwrap').appendChild(fb); fb.style.position = 'fixed'; fb.style.right = '20px'; fb.style.bottom = '20px';
+      }
+      if (type === 'freeze') {
+        area.classList.add('frozen'); const ice = document.createElement('div'); ice.className = 'ice'; area.appendChild(ice); QZ.paused++;
+        let n = 3; ice.textContent = `🧊 Frozen ${n}`;
+        const t = setInterval(() => { n--; ice.textContent = `🧊 Frozen ${n}`; if (n <= 0) { clearInterval(t); ice.remove(); area.classList.remove('frozen'); if (QZ) QZ.paused--; } }, 1000);
+      }
+      if (type === 'shuffle') { QZ.shuffleLeft = 3; const q = QZ.qs[QZ.i]; area.innerHTML = answerUI(q, true); (QZ.demo ? bindAnswerDemo : bindAnswer)(q); }
+      if (type === 'fog') {
+        let blur = 9; card.style.filter = `blur(${blur}px)`;
+        const tip = document.createElement('div'); tip.className = 'fogtip'; tip.textContent = '🌫️ Rub the card to clear the fog'; $('.qwrap').appendChild(tip);
+        const rub = () => { blur -= 0.18; if (blur <= 0) { card.style.filter = ''; tip.remove(); card.removeEventListener('pointermove', rub); } else card.style.filter = `blur(${blur}px)`; };
+        card.addEventListener('pointermove', rub);
+      }
+      if (type === 'glitch') { QZ.glitchLeft = 4; document.body.classList.add('glitch'); }
+      if (type === 'boss') this.bossFight(from);
+    },
+    closeBoss() { if (this.boss) { this.boss(); this.boss = null; } },
+    bossFight(from) {
+      if (this.boss) return;
+      QZ.paused++;
+      const m = modal(`<h2 style="text-align:center">👾 The Calculator King attacks!</h2><p class="muted small" style="text-align:center;margin:0 0 8px">Sent by ${esc(from)}. Move the ⭐ with your mouse, finger or arrow keys. Survive <b id="bt">12</b> seconds!</p><canvas id="bc" width="480" height="360" style="display:block;margin:0 auto;background:#140d33;width:100%"></canvas><p class="small" style="text-align:center;margin:8px 0 0">Hits: <b id="bh">0</b></p>`);
+      const cv = $('#bc', m), cx = cv.getContext('2d');
+      const P = { x: 240, y: 300 }; let shots = [], hits = 0, inv = 0, t0 = performance.now(), last = t0, bx = 240, raf, spawnT = 0, keys = {};
+      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * 360 / r.height }; };
+      cv.addEventListener('pointermove', e => { const p = toCanvas(e); P.x = p.x; P.y = Math.max(150, p.y); });
+      cv.addEventListener('pointerdown', e => { const p = toCanvas(e); P.x = p.x; P.y = Math.max(150, p.y); });
+      const kd = e => { if (e.key.startsWith('Arrow')) { keys[e.key] = true; e.preventDefault(); } }, ku = e => { keys[e.key] = false; };
+      document.addEventListener('keydown', kd); document.addEventListener('keyup', ku);
+      const SYM = ['÷', '×', '+', '−', '%', '=', '√'];
+      const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
+      const drawBoss = (x, t) => {
+        cx.save(); cx.translate(x, 70 + Math.sin(t / 300) * 6);
+        cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -74); cx.lineTo(-8, -56); cx.lineTo(0, -80); cx.lineTo(8, -56); cx.lineTo(22, -74); cx.lineTo(34, -52); cx.closePath(); cx.fill();
+        cx.fillStyle = '#6c4cf5'; cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
+        cx.fillStyle = '#9ff0c8'; cx.beginPath(); cx.roundRect(-46, -40, 92, 40, 8); cx.fill();
+        cx.strokeStyle = '#140d33'; cx.lineWidth = 4; cx.beginPath(); cx.moveTo(-30, -30); cx.lineTo(-12, -22); cx.moveTo(30, -30); cx.lineTo(12, -22); cx.stroke();
+        cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(-18, -13, 4, 0, 7); cx.arc(18, -13, 4, 0, 7); cx.fill();
+        for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { cx.fillStyle = c === 3 ? '#ff5d73' : '#efe9ff'; cx.beginPath(); cx.roundRect(-44 + c * 23, 10 + r * 19, 18, 14, 4); cx.fill(); }
+        cx.restore();
+      };
+      const loop = now => {
+        const dt = Math.min(50, now - last); last = now; const el = now - t0, left = 12 - el / 1000;
+        const sp = 0.32 * dt;
+        if (keys.ArrowLeft) P.x -= sp; if (keys.ArrowRight) P.x += sp; if (keys.ArrowUp) P.y -= sp; if (keys.ArrowDown) P.y += sp;
+        P.x = Math.max(10, Math.min(470, P.x)); P.y = Math.max(150, Math.min(350, P.y));
+        bx = 240 + Math.sin(el / 700) * 150;
+        spawnT -= dt;
+        if (spawnT <= 0) { spawnT = Math.max(130, 380 - el / 40); const n = el > 6000 ? 3 : 2; for (let k = 0; k < n; k++) { const ang = Math.atan2(P.y - 110, P.x - bx) + (Math.random() - 0.5) * 1.1, v = 0.14 + Math.random() * 0.1 + el / 90000; shots.push({ x: bx, y: 110, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, s: pick(SYM) }); } }
+        shots.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; });
+        shots = shots.filter(s => s.x > -20 && s.x < 500 && s.y < 380 && s.y > -20);
+        inv -= dt;
+        if (inv <= 0) for (const s of shots) if (Math.hypot(s.x - P.x, s.y - P.y) < 16) { hits++; inv = 700; $('#bh', m).textContent = hits; break; }
+        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, 360);
+        cx.strokeStyle = 'rgba(255,255,255,.08)'; cx.strokeRect(4, 150, 472, 206);
+        drawBoss(bx, now);
+        cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        shots.forEach(s => { cx.fillStyle = '#ff5d73'; cx.fillText(s.s, s.x, s.y); });
+        cx.fillStyle = inv > 0 && Math.floor(now / 80) % 2 ? 'rgba(255,201,60,.3)' : '#ffc93c'; star(P.x, P.y, 12);
+        $('#bt', m).textContent = Math.max(0, Math.ceil(left));
+        if (left <= 0) return finish();
+        raf = requestAnimationFrame(loop);
+      };
+      const stop = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
+      const finish = () => { stop(); this.boss = null; if (QZ) QZ.paused--; toast(hits === 0 ? '👾 Flawless! The Calculator King retreats.' : `👾 You survived with ${hits} hit${hits === 1 ? '' : 's'}. Back to maths!`, 'good'); };
+      this.boss = () => { stop(); };
+      raf = requestAnimationFrame(loop);
+    },
+  };
+
+  // =====================================================================
+  // ARCADE
+  // =====================================================================
+  function viewArcade() {
+    const has = S.arcadeMs > 0;
+    $('#view').innerHTML = `
+      <div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><div><h2 style="margin:0">🕹️ Arcade</h2><div class="muted">Time left: <b>${mmss(S.arcadeMs)}</b> · Each quiz adds 10 minutes (Hard: 15), up to 30.</div></div>
+        ${has ? '' : '<button class="btn green" id="earn">Do a quiz to unlock ▶</button>'}</div></div>
+      <div class="grid g3">${Games.list.map(g => `<button class="gametile" data-g="${g.id}" style="background:${g.color};opacity:${has ? 1 : .55}"><span class="e">${g.emoji}</span><div><div class="big">${g.name}</div><div class="small">${g.desc}</div></div></button>`).join('')}</div>`;
+    if (!has) $('#earn').onclick = () => route('study');
+    $$('[data-g]').forEach(b => b.onclick = () => { if (S.arcadeMs <= 0) return toast('No Arcade time left. Finish a quiz to earn more!', 'bad'); playGame(Games.list.find(g => g.id === b.dataset.g)); });
+  }
+  function playGame(g) {
+    $('#view').innerHTML = `<div class="card"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2 style="margin:0">${g.emoji} ${g.name}</h2><div class="row"><span class="pill" style="background:#efeafe;color:#6c4cf5">⏱ <b id="arcLeft">${mmss(S.arcadeMs)}</b></span><button class="btn sm ghost" id="exit">Exit</button></div></div><div id="gameArea"></div></div>`;
+    let stopGame = null, done = false;
+    const area = $('#gameArea');
+    const tick = setInterval(() => {
+      S.arcadeMs = Math.max(0, S.arcadeMs - 1000); renderHud(); const el = $('#arcLeft'); if (el) el.textContent = mmss(S.arcadeMs);
+      if (S.arcadeMs % 10000 === 0) Store.save();
+      if (S.arcadeMs <= 0 && !done) api.end(0, "Arcade time's up! Finish a quiz to play more.");
+    }, 1000);
+    const api = {
+      end(tokens, msg) {
+        if (done) return; done = true; clearInterval(tick); if (stopGame) stopGame(); Store.save();
+        if (tokens) addTokens(tokens, g.name);
+        area.innerHTML = `<div style="text-align:center;padding:20px"><div style="font-size:54px">${tokens > 0 ? '🎉' : tokens < 0 ? '💥' : '🎮'}</div><h2>${esc(msg)}</h2><p class="big" style="font-size:22px">${tokens > 0 ? '+' : ''}${fmt(tokens)} 🪙</p>
+          <div class="row" style="justify-content:center"><button class="btn green" id="again" ${S.arcadeMs > 0 ? '' : 'disabled'}>Play again</button><button class="btn ghost" id="back">Back to Arcade</button></div></div>`;
+        $('#again').onclick = () => playGame(g); $('#back').onclick = () => route('arcade');
+      },
+    };
+    stopGame = g.start(area, api);
+    $('#exit').onclick = () => route('arcade');
+    cleanup = () => { clearInterval(tick); if (!done && stopGame) stopGame(); done = true; Store.save(); };
+    Net.updatePresence('In the Arcade');
+  }
+
+  // =====================================================================
+  // CHESS
+  // =====================================================================
+  let CH = null, chessLevel = 3, chessColor = 'w';
+  const GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟' };
+  const sqName = i => 'abcdefgh'[i & 7] + (8 - (i >> 3));
+  function newChess() {
+    const st = Chess.newGame();
+    CH = { st, level: chessLevel, color: chessColor, hist: [], moves: [], over: null, sel: null, hint: null, hintUsed: false, reps: { [Chess.key(st)]: 1 }, last: null, thinking: false, paid: false };
+    if (chessColor === 'b') botMove();
+  }
+  function viewChess() {
+    if (!CH) newChess();
+    renderChess();
+    cleanup = () => {};
+  }
+  function renderChess() {
+    const L = CHESS[CH.level];
+    const legal = CH.sel !== null ? Chess.legal(CH.st).filter(m => m.from === CH.sel) : [];
+    const chk = Chess.inCheck(CH.st) ? CH.st.b.indexOf(CH.st.turn === 'w' ? 'K' : 'k') : -1;
+    let cells = '';
+    for (let rr = 0; rr < 8; rr++) for (let ff = 0; ff < 8; ff++) {
+      const r = CH.color === 'w' ? rr : 7 - rr, f = CH.color === 'w' ? ff : 7 - ff, i = r * 8 + f, p = CH.st.b[i];
+      const cls = ['sq', (r + f) % 2 ? 'd' : 'l'];
+      if (CH.sel === i) cls.push('sel');
+      if (CH.last && (CH.last.from === i || CH.last.to === i)) cls.push('last');
+      if (chk === i) cls.push('chk');
+      if (CH.hint && (CH.hint.from === i || CH.hint.to === i)) cls.push('hint');
+      const tgt = legal.find(m => m.to === i);
+      cells += `<button class="${cls.join(' ')}" data-sq="${i}">${ff === 0 ? `<span class="coord">${8 - r}</span>` : ''}${rr === 7 ? `<span class="coord" style="left:auto;right:3px;top:auto;bottom:2px">${'abcdefgh'[f]}</span>` : ''}${tgt ? (p !== '.' ? '<span class="cap"></span>' : '<span class="dot"></span>') : ''}${p !== '.' ? `<span class="pc ${Chess.colorOf(p)}">${GLYPH[p.toUpperCase()]}︎</span>` : ''}</button>`;
+    }
+    const status = CH.over ? CH.over.text : CH.thinking ? `🤔 ${L[0]} bot is thinking…` : (CH.st.turn === CH.color ? 'Your move' : 'Bot to move') + (chk >= 0 ? ' — check!' : '');
+    $('#view').innerHTML = `
+      <div class="chesswrap">
+        <div><div class="board" id="board">${cells}</div></div>
+        <div class="grid" style="gap:12px">
+          <div class="card"><h2 style="margin-bottom:6px">♞ Chess vs ${L[0]} bot</h2><div class="muted small">${L[1]} · Win 🪙 ${fmt(L[2])} · Draw <b style="color:#d63e55">−${fmt(DRAW_PENALTY)} 🪙</b>${CH.hintUsed ? ' · hint used: half tokens' : ''}</div>
+            <div class="big" style="font-size:20px;margin-top:10px">${esc(status)}</div>
+            ${S.day.quizzes ? '' : '<div class="small" style="margin-top:6px;color:#d63e55;font-weight:800">Finish a quiz today to earn chess tokens.</div>'}
+          </div>
+          <div class="card"><div class="row">
+            <button class="btn sm yellow" id="hint" ${CH.over || CH.st.turn !== CH.color ? 'disabled' : ''}>💡 Hint (${HINT_COST} 🪙)</button>
+            <button class="btn sm ghost" id="undo" ${CH.level > 2 || CH.over || CH.thinking || CH.hist.length < 2 ? 'disabled' : ''}>↩ Undo</button>
+            <button class="btn sm red" id="resign" ${CH.over ? 'disabled' : ''}>🏳 Resign</button></div></div>
+          <div class="card"><h3>New game</h3>
+            <div class="row" style="margin-bottom:10px">${[1, 2, 3, 4, 5].map(l => `<button class="chip ${chessLevel === l ? 'on' : ''}" data-cl="${l}">${l}. ${CHESS[l][0]}</button>`).join('')}</div>
+            <div class="row"><button class="chip ${chessColor === 'w' ? 'on' : ''}" data-cc="w">Play white</button><button class="chip ${chessColor === 'b' ? 'on' : ''}" data-cc="b">Play black</button><button class="btn sm green" id="newg">Start ▶</button></div>
+            <div class="muted small" style="margin-top:8px">Undo works on levels 1 and 2 only.</div></div>
+          <div class="card"><h3>Moves</h3><div class="movelist">${CH.moves.length ? CH.moves.map((m, k) => k % 2 === 0 ? `${k / 2 + 1}. ${m}` : ` ${m}<br>`).join('') : '<span class="muted">No moves yet</span>'}</div></div>
+        </div>
+      </div>`;
+    $$('#board .sq').forEach(b => b.onclick = () => clickSq(+b.dataset.sq));
+    $('#hint').onclick = () => { if (!spend(HINT_COST)) return; CH.hintUsed = true; CH.hint = Chess.bestMove(CH.st, 4); renderChess(); };
+    $('#undo').onclick = () => { if (CH.hist.length < 2) return; for (let k = 0; k < 2; k++) { const h = CH.hist.pop(); CH.st = h.st; CH.moves.pop(); CH.reps = h.reps; CH.last = h.last; } CH.sel = null; CH.hint = null; renderChess(); };
+    $('#resign').onclick = () => endChess('loss', 'You resigned.');
+    $$('[data-cl]').forEach(b => b.onclick = () => { chessLevel = +b.dataset.cl; renderChess(); });
+    $$('[data-cc]').forEach(b => b.onclick = () => { chessColor = b.dataset.cc; renderChess(); });
+    $('#newg').onclick = () => { newChess(); renderChess(); };
+    Net.updatePresence('Playing chess');
+  }
+  function clickSq(i) {
+    if (CH.over || CH.thinking || CH.st.turn !== CH.color) return;
+    const p = CH.st.b[i];
+    if (CH.sel !== null) {
+      const ms = Chess.legal(CH.st).filter(m => m.from === CH.sel && m.to === i);
+      if (ms.length) {
+        if (ms.length > 1) { // promotion
+          const m = modal(`<h2>Promote to…</h2><div class="row">${[...'QRBN'].map(c => `<button class="btn ghost" style="font-size:34px" data-pr="${c}">${GLYPH[c]}︎</button>`).join('')}</div>`);
+          $$('[data-pr]', m).forEach(b => b.onclick = () => { m.remove(); doMove(ms.find(x => x.promo === b.dataset.pr)); });
+          return;
+        }
+        return doMove(ms[0]);
+      }
+    }
+    CH.sel = (p !== '.' && Chess.colorOf(p) === CH.color) ? i : null; renderChess();
+  }
+  function moveText(m) { const t = m.piece.toUpperCase(); if (m.castle) return 'Kk'.includes(m.castle) ? 'O-O' : 'O-O-O'; return `${t === 'P' ? '' : t}${sqName(m.from)}${m.cap !== '.' ? 'x' : '-'}${sqName(m.to)}${m.promo ? '=' + m.promo : ''}`; }
+  function doMove(m) {
+    CH.hist.push({ st: CH.st, reps: Object.assign({}, CH.reps), last: CH.last });
+    CH.st = Chess.make(CH.st, m); CH.last = m; CH.sel = null; CH.hint = null;
+    CH.moves.push(moveText(m) + (Chess.inCheck(CH.st) ? '+' : ''));
+    const k = Chess.key(CH.st); CH.reps[k] = (CH.reps[k] || 0) + 1;
+    if (checkOver()) { if (cur === 'chess') renderChess(); return; }
+    if (cur === 'chess') renderChess();
+    if (CH.st.turn !== CH.color) botMove();
+  }
+  function checkOver() {
+    const ms = Chess.legal(CH.st);
+    if (!ms.length) { if (Chess.inCheck(CH.st)) endChess(CH.st.turn === CH.color ? 'loss' : 'win', CH.st.turn === CH.color ? 'Checkmate — the bot wins.' : 'Checkmate — you win! 🏆'); else endChess('draw', 'Stalemate — draw.'); return true; }
+    if (CH.st.half >= 100) { endChess('draw', 'Draw by the 50-move rule.'); return true; }
+    if (CH.reps[Chess.key(CH.st)] >= 3) { endChess('draw', 'Draw by repetition.'); return true; }
+    if (Chess.insufficient(CH.st.b)) { endChess('draw', 'Draw — not enough pieces to checkmate.'); return true; }
+    return false;
+  }
+  function botMove() {
+    CH.thinking = true; const game = CH;
+    setTimeout(() => {
+      if (CH !== game || CH.over) return;
+      const m = Chess.bestMove(CH.st, CH.level); CH.thinking = false;
+      if (m) doMove(m); else checkOver();
+      if (cur === 'chess') renderChess();
+    }, 350);
+    if (cur === 'chess' && $('#board')) renderChess();
+  }
+  function endChess(result, text) {
+    if (CH.over) return;
+    CH.thinking = false; CH.over = { result, text };
+    S.stats[result === 'win' ? 'cw' : result === 'loss' ? 'cl' : 'cd']++;
+    const L = CHESS[CH.level]; let t = result === 'win' ? L[2] : result === 'draw' ? -DRAW_PENALTY : 0;
+    if (t > 0 && CH.hintUsed) t = Math.round(t / 2);
+    if (t > 0 && !S.day.quizzes) { toast('Finish a quiz today to earn chess tokens!', 'bad'); t = 0; }
+    Store.save();
+    if (t) addTokens(t, t < 0 ? `Draw penalty vs ${L[0]}` : `Chess win vs ${L[0]}`);
+    else if (result === 'win') toast('🏆 You won!', 'good');
+    if (cur === 'chess') renderChess();
+  }
+
+  // =====================================================================
+  // FRIENDS + NETWORK
+  // =====================================================================
+  const Net = {
+    room: null, cid: Math.random().toString(36).slice(2, 10), peers: [], selected: null, status: 'Online', lastFrom: {},
+    async init() {
+      try {
+        if (!window.claude || !claude.use) return;
+        const room = await claude.use('room'); if (!room) return;
+        this.room = room;
+        room.onPeers(list => {
+          const arr = Array.isArray(list) ? list : Object.values(list || {});
+          this.peers = arr.map(p => { const d = (p && (p.presence || p.state || p.data)) || p || {}; return { cid: d.cid, name: d.name, avatar: d.avatar, status: d.status }; })
+            .filter(p => p.cid && p.cid !== this.cid && typeof p.name === 'string').map(p => ({ cid: String(p.cid).slice(0, 20), name: p.name.slice(0, 24), avatar: String(p.avatar || '🙂').slice(0, 4), status: String(p.status || 'Online').slice(0, 30) }));
+          if (cur === 'friends') renderFriendList();
+        });
+        const unwrap = x => (x && x.to) ? x : (x && x.data && x.data.to) ? x.data : (x && x.payload) || x;
+        room.on('sab', x => { const d = unwrap(x); if (!d || d.to !== this.cid || !SABS[d.type]) return; this.receiveSab(d); });
+        room.on('msg', x => { const d = unwrap(x); if (!d || d.to !== this.cid) return; this.receiveMsg(d); });
+        room.on('ack', x => { const d = unwrap(x); if (!d || d.to !== this.cid) return; toast(d.blocked ? `🛡️ ${esc(String(d.name).slice(0, 24))} blocked your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} with a shield!` : `😈 Your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} landed on ${esc(String(d.name).slice(0, 24))}!`, d.blocked ? 'bad' : 'good'); });
+        this.updatePresence();
+        if (cur === 'friends') viewFriends();
+      } catch (e) { this.room = null; }
+    },
+    updatePresence(status) {
+      this.status = status || (QZ ? 'Studying 📚' : cur === 'arcade' ? 'In the Arcade' : cur === 'chess' ? 'Playing chess' : 'Online');
+      if (!this.room) return;
+      try { this.room.presence({ cid: this.cid, name: S.name || 'Player', avatar: S.avatar, status: this.status }); } catch (e) {}
+    },
+    send(topic, data) { if (!this.room) return false; try { this.room.emit(topic, data); return true; } catch (e) { toast("Couldn't reach your friend — try again.", 'bad'); return false; } },
+    receiveSab(d) {
+      const now = Date.now(); if (this.lastFrom[d.from] && now - this.lastFrom[d.from] < 3000) return; this.lastFrom[d.from] = now;
+      const from = String(d.fromName || 'A friend').slice(0, 24);
+      if (S.shields > 0) { S.shields--; Store.save(); toast(`🛡️ Your shield blocked ${esc(from)}'s ${SABS[d.type].name}! (${S.shields} left)`, 'good'); this.send('ack', { to: d.from, blocked: true, type: d.type, name: S.name || 'Player' }); return; }
+      this.send('ack', { to: d.from, blocked: false, type: d.type, name: S.name || 'Player' });
+      Sab.incoming(d.type, from);
+    },
+    receiveMsg(d) {
+      const from = esc(String(d.fromName || 'A friend').slice(0, 24));
+      if (d.sticker && STICKERS.includes(d.sticker)) { const s = document.createElement('div'); s.className = 'sticker'; s.textContent = d.sticker; document.body.appendChild(s); setTimeout(() => s.remove(), 2300); toast(`${from} sent you a sticker ${d.sticker}`, 'msg'); }
+      else if (MSGS.includes(d.text)) toast(`💬 <b>${from}</b>: ${esc(d.text)}`, 'msg');
+    },
+  };
+  function viewFriends() {
+    $('#view').innerHTML = `
+      <div class="grid g2" style="margin-bottom:14px">
+        <div class="card"><h2>👥 Friends</h2>
+          <div class="row" style="margin-bottom:10px"><input class="text" id="nm" maxlength="20" value="${esc(S.name)}" placeholder="Your display name"><button class="btn sm" id="saveNm">Save name</button></div>
+          ${Net.room ? `<p class="muted small" style="margin:0">Friends who have this page open right now show up below. Share the page from claude.ai to invite them.</p>` :
+            `<p class="muted small" style="margin:0">Live friends aren't connected in this view. Open the page from its claude.ai link; friends you share it with appear here while they have it open.</p>`}
+          <div id="flist" class="grid" style="margin-top:12px"></div>
+        </div>
+        <div class="card"><h3>🛡️ Your defences</h3><p class="muted small" style="margin:0 0 10px">You have <b>${S.shields}</b> shield${S.shields === 1 ? '' : 's'}. Each one blocks one sabotage from a friend.</p>
+          <button class="btn sm yellow" id="buyShield">Buy shield (${SHIELD_COST} 🪙)</button>
+          <h3 style="margin-top:16px">🤖 Bot rivals</h3><label class="switch"><input type="checkbox" id="bots" ${S.botRivals ? 'checked' : ''}> RoboRival sometimes sabotages your quizzes</label>
+        </div>
+      </div>
+      <div class="card" id="targetCard"></div>`;
+    $('#saveNm').onclick = () => { S.name = $('#nm').value.trim().slice(0, 20); Store.save(); renderHud(); Net.updatePresence(); toast('Name saved', 'good'); };
+    $('#buyShield').onclick = () => { if (spend(SHIELD_COST)) { S.shields++; Store.save(); viewFriends(); toast('🛡️ Shield bought', 'good'); } };
+    $('#bots').onchange = e => { S.botRivals = e.target.checked; Store.save(); };
+    renderFriendList();
+    Bot.run(); cleanup = () => Bot.stop();
+  }
+  function renderFriendList() {
+    const fl = $('#flist'); if (!fl) return;
+    if (Net.selected && Net.selected !== 'bot' && !Net.peers.find(p => p.cid === Net.selected)) Net.selected = null;
+    const everyone = [BOT_PEER, ...Net.peers];
+    if (!Net.selected) Net.selected = 'bot';
+    fl.innerHTML = everyone.map(p => `<button class="friend ${Net.selected === p.cid ? 'on' : ''}" data-f="${esc(p.cid)}"><span class="av">${esc(p.avatar)}</span><span style="flex:1">${esc(p.name)}</span><span class="status ${/Stud/.test(p.status) ? '' : 'idle'}">${esc(p.status)}</span></button>`).join('') + (Net.peers.length ? '' : `<div class="muted small">${Net.room ? 'No real friends online yet — practise on RoboRival!' : ''}</div>`);
+    $$('[data-f]', fl).forEach(b => b.onclick = () => { Net.selected = b.dataset.f; renderFriendList(); });
+    renderTarget();
+  }
+  function renderTarget() {
+    const tc = $('#targetCard'); if (!tc) return;
+    const f = Net.selected === 'bot' ? BOT_PEER : Net.peers.find(p => p.cid === Net.selected);
+    const isBot = f && f.cid === 'bot';
+    tc.innerHTML = `${isBot ? '<div id="botArena" style="margin-bottom:16px"></div>' : ''}
+      <h2>${f ? `Target: ${esc(f.avatar)} ${esc(f.name)}` : 'Sabotages'}</h2>
+      <p class="muted small" style="margin:0 0 12px">${isBot ? 'RoboRival is doing a quiz right now. Sabotage it to slow it down and make it get answers wrong. Careful — it sometimes takes revenge!' : f ? (/Stud/.test(f.status) ? 'They are in a quiz right now — it hits immediately!' : 'They are not in a quiz. It will hit in their next quiz (within 10 minutes).') : 'Pick a friend above to send one. Tap "Try on me" to see what each does — free.'}</p>
+      <div class="grid g3">${Object.entries(SABS).map(([k, s]) => `<div class="sabbtn"><span class="e">${s.e}</span><b>${s.name}</b><span class="small muted">${s.desc}</span><span class="cost">🪙 ${fmt(s.cost)}</span>
+        <div class="row">${f ? `<button class="btn sm" data-send="${k}">Send</button>` : ''}<button class="btn sm ghost" data-try="${k}">Try on me</button></div></div>`).join('')}</div>
+      ${f ? `<h3 style="margin-top:18px">💬 Messages <span class="cost">🪙 ${MSG_COST}</span></h3><div class="row">${MSGS.map((m, i) => `<button class="chip" data-msg="${i}">${esc(m)}</button>`).join('')}</div>
+      <h3 style="margin-top:14px">✨ Stickers <span class="cost">🪙 ${STICKER_COST}</span></h3><div class="row">${STICKERS.map(s => `<button class="chip" style="font-size:24px" data-st="${s}">${s}</button>`).join('')}</div>` : ''}`;
+    $$('[data-try]', tc).forEach(b => b.onclick = () => tryOnMe(b.dataset.try));
+    if (!f) return;
+    if (isBot) {
+      Bot.draw();
+      $$('[data-send]', tc).forEach(b => b.onclick = () => { const k = b.dataset.send; if (!spend(SABS[k].cost)) return; Bot.hit(k); });
+      $$('[data-msg]', tc).forEach(b => b.onclick = () => { if (!spend(MSG_COST)) return; Bot.say(pick(['Beep boop. Whatever 🙄', 'My circuits are unbothered 😎', 'Focus, human! 🤖', 'GG… for now 🤝'])); });
+      $$('[data-st]', tc).forEach(b => b.onclick = () => { if (!spend(STICKER_COST)) return; Bot.say(`${b.dataset.st}?! Rude.`); });
+      return;
+    }
+    $$('[data-send]', tc).forEach(b => b.onclick = () => { const k = b.dataset.send; if (!spend(SABS[k].cost)) return; if (Net.send('sab', { to: f.cid, from: Net.cid, fromName: S.name || 'Player', type: k })) toast(`${SABS[k].e} ${SABS[k].name} sent to ${esc(f.name)}!`, 'good'); else addTokens(SABS[k].cost); });
+    $$('[data-msg]', tc).forEach(b => b.onclick = () => { if (!spend(MSG_COST)) return; if (Net.send('msg', { to: f.cid, fromName: S.name || 'Player', text: MSGS[+b.dataset.msg] })) toast('💬 Message sent', 'good'); else addTokens(MSG_COST); });
+    $$('[data-st]', tc).forEach(b => b.onclick = () => { if (!spend(STICKER_COST)) return; if (Net.send('msg', { to: f.cid, fromName: S.name || 'Player', sticker: b.dataset.st })) toast(`${b.dataset.st} Sticker sent`, 'good'); else addTokens(STICKER_COST); });
+  }
+  function tryOnMe(type) {
+    // a free demo quiz question with the effect applied
+    QZ = { review: false, level: S.level, topic: 'Demo', diff: 0, timed: false, qs: [Object.assign(Quiz.make(S.level, 'Mixed', 0), { text: '' })], i: 0, log: [], paused: 0, timeLeft: 1e9, shuffleLeft: 0, glitchLeft: 0, demo: true };
+    const q = QZ.qs[0]; Object.assign(q, Quiz.make(S.level, 'Mixed', 0));
+    locked = true; renderTabs();
+    $('#view').innerHTML = `<div class="qwrap"><div class="row" style="justify-content:space-between;margin-bottom:10px"><b class="big" style="font-size:20px">Preview: ${SABS[type].e} ${SABS[type].name}</b><button class="btn sm" id="doneDemo">Done</button></div>
+      <div class="card" id="qcard"><div class="qmeta"><span class="tag">Demo — no tokens</span></div><div class="qtext">${q.text}</div></div><div class="card" id="answerArea" style="margin-top:12px">${answerUI(q, false)}</div></div>`;
+    bindAnswerDemo(q);
+    setTimeout(() => Sab.apply(type, 'You (preview)'), 300);
+    $('#doneDemo').onclick = () => { QZ = null; locked = false; document.body.classList.remove('glitch'); Sab.closeBoss(); route('friends', true); };
+  }
+  function bindAnswerDemo(q) {
+    const go = v => { const ok = Quiz.check(q, v); toast(ok ? '✅ Correct!' : `❌ Answer: ${esc(Quiz.answerText(q))}`, ok ? 'good' : 'bad'); };
+    if (q.choices) { $$('.choice').forEach(b => b.onclick = () => go(b.dataset.c)); return; }
+    const inp = $('#ans'); $('#sub').onclick = () => go(inp.value); inp.onkeydown = e => { if (e.key === 'Enter') go(inp.value); };
+    $$('.key').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === '⌫') inp.value = inp.value.slice(0, -1); else inp.value += k === '−' ? '-' : k; });
+  }
+
+
+  // =====================================================================
+  // ROBORIVAL — a practice bot you can sabotage
+  // =====================================================================
+  const BOT_PEER = { cid: 'bot', name: 'RoboRival (bot)', avatar: '🤖', status: 'Studying 📚' };
+  const Bot = {
+    q: null, i: 0, score: 0, next: 0, fx: {}, wrongLeft: 0, glitchLeft: 0, frozenUntil: 0, bubble: '', bubbleUntil: 0, timer: null, done: false, total: 0,
+    newQ() { this.q = Quiz.make(S.level, 'Mixed', 1); this.fx = {}; this.qStart = Date.now(); this.total = 3500 + Math.random() * 3000; this.next = this.qStart + this.total; },
+    start() { this.i = 0; this.score = 0; this.done = false; this.wrongLeft = 0; this.glitchLeft = 0; this.newQ(); },
+    run() { if (!this.q) this.start(); clearInterval(this.timer); this.timer = setInterval(() => this.tick(), 250); },
+    stop() { clearInterval(this.timer); this.timer = null; },
+    say(t) { this.bubble = t; this.bubbleUntil = Date.now() + 2500; this.draw(); },
+    tick() {
+      if (!$('#botArena')) return;
+      const now = Date.now();
+      if (!this.done && now >= this.next) {
+        let pWrong = 0.15 + (this.fx.ink ? 0.2 : 0) + (this.fx.flip ? 0.2 : 0) + (this.fx.fog ? 0.2 : 0) + (this.wrongLeft > 0 ? 0.45 : 0) + (this.glitchLeft > 0 ? 0.15 : 0);
+        const ok = Math.random() > pWrong; if (ok) this.score++;
+        this.say(ok ? '✅ Easy!' : pick(['❌ Argh, wrong!', '❌ That was YOUR fault!', '❌ Error 404: answer not found']));
+        if (this.wrongLeft > 0) this.wrongLeft--; if (this.glitchLeft > 0) this.glitchLeft--;
+        this.i++;
+        if (this.i >= 10) { this.done = true; this.say(`I scored ${this.score}/10 ${this.score <= 5 ? '😭 You did this!' : '😎'}`); setTimeout(() => { if (this.timer) { this.start(); this.draw(); } }, 5000); }
+        else this.newQ();
+      }
+      this.draw();
+    },
+    hit(type) {
+      if (this.done) { this.start(); }
+      const s = SABS[type], now = Date.now();
+      toast(`${s.e} ${s.name} hit RoboRival!`, 'good');
+      if (type === 'ink') { this.fx.ink = true; this.next += 2500; }
+      if (type === 'flip') { this.fx.flip = true; this.next += 2000; }
+      if (type === 'fog') { this.fx.fog = true; this.next += 2500; }
+      if (type === 'freeze') { this.frozenUntil = now + 3000; this.next += 3000; }
+      if (type === 'shuffle') this.wrongLeft = 3;
+      if (type === 'glitch') this.glitchLeft = 3;
+      if (type === 'boss') { this.fx.boss = true; this.next += 8000; this.wrongLeft = Math.max(this.wrongLeft, 1); }
+      this.total = this.next - this.qStart;
+      this.say(pick(['Hey! 😠', 'NOOO my circuits! 🤯', 'You will pay for this 😤', 'Not cool, human 😾', 'Rebooting… 🔄']));
+      if (S.botRivals && Math.random() < 0.25) setTimeout(() => { toast('🤖 RoboRival is taking revenge…', 'bad'); Sab.incoming(pick(['ink', 'flip', 'fog', 'shuffle']), 'RoboRival 🤖'); }, 2500);
+    },
+    draw() {
+      const el = $('#botArena'); if (!el || !this.q) return;
+      const now = Date.now(), frozen = now < this.frozenUntil, left = Math.max(0, this.next - now);
+      const pct = this.done ? 100 : Math.max(0, Math.min(100, 100 - 100 * left / (this.total || 1)));
+      const glitch = this.glitchLeft > 0;
+      const splats = this.fx.ink ? [[8, 10, '#ff5d73'], [55, 20, '#3aa0ff'], [30, 45, '#ffc93c'], [70, 55, '#20bf8a']].map(([x, y, c]) => `<span style="position:absolute;left:${x}%;top:${y}%;width:70px;height:60px;border-radius:50%;background:${c};opacity:.92"></span>`).join('') : '';
+      el.innerHTML = `
+        <div class="row" style="justify-content:space-between;margin-bottom:8px"><b class="big" style="font-size:18px">🤖 RoboRival's quiz</b><span class="tag">Q ${Math.min(this.i + 1, 10)}/10 · Score ${this.score}</span></div>
+        <div style="position:relative">
+          <div style="position:relative;overflow:hidden;border-radius:16px;padding:14px;min-height:110px;border:2px solid var(--line);background:${glitch ? '#ffe0f1' : '#faf8ff'};${glitch ? 'font-family:\'Comic Sans MS\',cursive;color:#7a0046;' : ''}transition:transform .5s;${this.fx.flip ? 'transform:rotate(180deg);' : ''}${this.fx.fog ? 'filter:blur(6px);' : ''}">
+            <div style="font-weight:700">${this.done ? 'Quiz finished — starting a new one soon…' : this.q.text}</div>${splats}
+          </div>
+          ${frozen ? '<div class="ice" style="inset:0">🧊 Frozen!</div>' : ''}
+          ${this.fx.boss && !this.done ? '<div style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(20,13,51,.75);border-radius:16px;color:#fff;font-weight:800;font-size:18px">👾 Fighting the Calculator King…</div>' : ''}
+          ${now < this.bubbleUntil ? `<div style="position:absolute;right:8px;top:-14px;background:var(--ink);color:#fff;padding:6px 12px;border-radius:14px;font-weight:800;font-size:14px;z-index:8">${esc(this.bubble)}</div>` : ''}
+        </div>
+        <div class="bar" style="margin-top:10px"><i style="width:${pct}%;background:linear-gradient(90deg,#ff9a3c,#ff5d73)"></i></div>
+        <div class="muted small" style="margin-top:6px">${this.wrongLeft > 0 ? `🔀 Confused for ${this.wrongLeft} more answer${this.wrongLeft === 1 ? '' : 's'} · ` : ''}${glitch ? '💖 Glitched · ' : ''}Thinking…</div>`;
+    },
+  };
+
+  // =====================================================================
+  // SHOP
+  // =====================================================================
+  function viewShop() {
+    $('#view').innerHTML = `
+      <div class="card" style="margin-bottom:14px"><h2>🛍️ Shop</h2><p class="muted" style="margin:0">You have 🪙 <b>${fmt(S.tokens)}</b>. Tokens have no money value and can't be bought.</p></div>
+      <div class="grid g2">
+        <div class="card"><h3>Avatars</h3><div class="grid g3">${AVATARS.map(([a, c]) => { const own = S.owned.includes(a); return `<button class="sabbtn" data-av="${a}" style="align-items:center;text-align:center;${S.avatar === a ? 'border-color:#6c4cf5' : ''}"><span style="font-size:40px">${a}</span><b>${S.avatar === a ? 'Equipped' : own ? 'Equip' : `🪙 ${fmt(c)}`}</b></button>`; }).join('')}</div></div>
+        <div class="card"><h3>Power-ups</h3>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">🛡️</span><b>Shield</b><span class="small muted">Blocks one sabotage from a friend. You have ${S.shields}.</span><button class="btn sm yellow" id="sh" style="align-self:flex-start">Buy for ${SHIELD_COST} 🪙</button></div>
+          <div class="sabbtn"><span class="e">📊</span><b>Your stats</b><span class="small">Quizzes: ${S.stats.quizzes} · Accuracy: ${S.stats.total ? Math.round(100 * S.stats.correct / S.stats.total) : 0}%<br>Chess: ${S.stats.cw} W / ${S.stats.cd} D / ${S.stats.cl} L</span></div>
+        </div>
+      </div>`;
+    $$('[data-av]').forEach(b => b.onclick = () => {
+      const a = b.dataset.av, c = AVATARS.find(x => x[0] === a)[1];
+      if (!S.owned.includes(a)) { if (!spend(c)) return; S.owned.push(a); toast(`New avatar ${a}!`, 'good'); }
+      S.avatar = a; Store.save(); renderHud(); Net.updatePresence(); viewShop();
+    });
+    $('#sh').onclick = () => { if (spend(SHIELD_COST)) { S.shields++; Store.save(); viewShop(); toast('🛡️ Shield bought', 'good'); } };
+  }
+
+  // ---------- boot ----------
+  Store.load();
+  if (!S.name) S.name = '';
+  renderHud(); route('study');
+  setInterval(() => { Store.fixDay(); }, 60000);
+  Net.init(); Store.connect();
+})();
+
+</script>
+</body>
+</html>
