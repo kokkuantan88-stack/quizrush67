@@ -39,7 +39,7 @@
   const Store = {
     db: null, doc: null, timer: null,
     load() { try { const raw = localStorage.getItem('mathquest'); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch (e) {} this.fixDay(); },
-    fixDay() { if (S.day.date !== today()) S.day = { date: today(), easy: 0, quizzes: 0 }; if (!S.starterGiven) { S.starterGiven = true; S.tokens += 10000; this.gift = true; } },
+    fixDay() { if (S.day.date !== today()) S.day = { date: today(), easy: 0, quizzes: 0 }; if (!S.starterGiven) { S.starterGiven = true; S.starter100k = true; S.tokens += 100000; this.gift = 100000; } else if (!S.starter100k) { S.starter100k = true; S.tokens += 90000; this.gift = 90000; } },
     save() { S.savedAt = Date.now(); try { localStorage.setItem('mathquest', JSON.stringify(S)); } catch (e) {}
       clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.doc) { try { const p = this.doc.set(JSON.parse(JSON.stringify(S))); if (p && p.catch) p.catch(() => {}); } catch (e) {} } }, 1200); },
     async connect() {
@@ -1014,7 +1014,7 @@
   Store.load();
   if (!S.name) S.name = '';
   renderHud(); route('study');
-  if (Store.gift) { Store.save(); setTimeout(() => toast('🎁 Welcome gift: 10,000 starter coins!', 'good'), 400); }
+  if (Store.gift) { Store.save(); setTimeout(() => toast(Store.gift === 100000 ? '🎁 Welcome gift: 100,000 starter tokens!' : '🎁 Starter tokens topped up: +90,000 (100,000 total)!', 'good'), 400); }
   setInterval(() => { Store.fixDay(); }, 60000);
   Net.init(); Store.connect();
 })();
