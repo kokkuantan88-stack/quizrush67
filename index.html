@@ -845,7 +845,7 @@ const Games = (() => {
         const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
         if (user && !S.name) { try { const me = await user.me(); if (me && me.name) { S.name = me.name.split(' ')[0]; Store.save(); Net.updatePresence(); renderHud(); } } catch (e) {} }
         // TEMP (remove later): one-time 500,000 coins for the page owner only
-        try { if (user && user.isOwner && user.isOwner() && !S.ownerGift500k) { S.ownerGift500k = true; S.tokens += 500000; Store.save(); renderHud(); toast('🎁 Owner gift: +500,000 🪙', 'good'); } } catch (e) {}
+        try { if (user && user.isOwner && (await user.isOwner()) === true && !S.ownerGift500k) { S.ownerGift500k = true; S.tokens += 500000; Store.save(); renderHud(); toast('🎁 Owner gift: +500,000 🪙', 'good'); } } catch (e) {}
         if (!db || !user) return;
         const id = await user.id(); if (!id) return;
         this.doc = db.collection('data/users/' + id).doc('state');
@@ -1960,6 +1960,7 @@ const Games = (() => {
   // =====================================================================
   function viewShop() {
     $('#view').innerHTML = `
+      <div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">🎟️ Redeem a code</h2><div class="row"><input class="text" id="code" maxlength="20" placeholder="Enter code" autocomplete="off"><button class="btn sm" id="redeem">Redeem</button></div></div></div>
       <div class="card" style="margin-bottom:14px"><h2>🛍️ Shop</h2><p class="muted" style="margin:0">You have 🪙 <b>${fmt(S.tokens)}</b>. Tokens have no money value and can't be bought.</p></div>
       <div class="grid g2">
         <div class="card"><h3>Avatars</h3><div class="grid g3">${AVATARS.map(([a, c]) => { const own = S.owned.includes(a); return `<button class="sabbtn" data-av="${a}" style="align-items:center;text-align:center;${S.avatar === a ? 'border-color:#6c4cf5' : ''}"><span style="font-size:40px">${a}</span><b>${S.avatar === a ? 'Equipped' : own ? 'Equip' : `🪙 ${fmt(c)}`}</b></button>`; }).join('')}</div></div>
@@ -1973,6 +1974,14 @@ const Games = (() => {
           <div class="sabbtn"><span class="e">📊</span><b>Your stats</b><span class="small">Quizzes: ${S.stats.quizzes} · Accuracy: ${S.stats.total ? Math.round(100 * S.stats.correct / S.stats.total) : 0}%<br>Chess: ${S.stats.cw} W / ${S.stats.cd} D / ${S.stats.cl} L</span></div>
         </div>
       </div>`;
+    // TEMP (remove later): secret code for 500,000 coins, usable once per player
+    const CODES = { KK500K: 500000 };
+    $('#redeem').onclick = () => {
+      const c = $('#code').value.trim().toUpperCase().replace(/\s+/g, ''); S.redeemed = S.redeemed || [];
+      if (!CODES[c]) return toast('That code does not work.', 'bad');
+      if (S.redeemed.includes(c)) return toast('You already used that code.', 'bad');
+      S.redeemed.push(c); addTokens(CODES[c], 'Code redeemed!'); viewShop();
+    };
     $$('[data-av]').forEach(b => b.onclick = () => {
       const a = b.dataset.av, c = AVATARS.find(x => x[0] === a)[1];
       if (!S.owned.includes(a)) { if (!spend(c)) return; S.owned.push(a); toast(`New avatar ${a}!`, 'good'); }
