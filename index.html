@@ -810,7 +810,7 @@ const Games = (() => {
     shuffle: { name: 'Shuffle', e: '🔀', cost: 250, desc: 'Keypad and options scramble for 2 questions' },
     fog: { name: 'Fog', e: '🌫️', cost: 300, desc: 'The question blurs; they rub to clear it' },
     glitch: { name: 'Glitch Theme', e: '💖', cost: 400, desc: 'Pink comic-font quiz for 3 questions' },
-    boss: { name: 'Boss Fight', e: '👾', cost: 7000, desc: 'Quiz pauses and the Calculator King attacks for 12 seconds' },
+    boss: { name: 'Boss Fight', e: '👾', cost: 7000, desc: 'Turn-based fight vs the Calculator King, up to 15 min. If they lose all HP, you get 10,000 of their tokens' },
   };
   const MSGS = ['Good luck! 🍀', "Bet you can't beat my score 😏", 'GG 🤝', 'Study harder! 📚', 'You got this 💪', 'Nice try 😂', 'Race you to 10/10 🏁'];
   const STICKERS = ['🐔', '🔥', '👻', '🦆', '💥', '🍕', '🤡', '🐸'];
@@ -822,7 +822,7 @@ const Games = (() => {
   // ---------- state ----------
   const blank = () => ({ v: 1, name: '', avatar: '🦊', owned: ['🦊'], tokens: 0, arcadeMs: 0, shields: 1, botRivals: true,
     streak: { last: '', n: 0 }, day: { date: today(), easy: 0, quizzes: 0 }, mastery: {}, review: [],
-    stats: { quizzes: 0, correct: 0, total: 0, cw: 0, cl: 0, cd: 0 }, level: 'P6', savedAt: 0 });
+    stats: { quizzes: 0, correct: 0, total: 0, cw: 0, cl: 0, cd: 0 }, items: {}, level: 'P6', savedAt: 0 });
   let S = blank();
   const Store = {
     db: null, doc: null, timer: null,
@@ -966,7 +966,7 @@ const Games = (() => {
     bindAnswer(q);
     // pending sabotages from friends, then bot rivals
     Sab.queue = Sab.queue.filter(s => s.exp > Date.now());
-    if (Sab.queue.length) { const s = Sab.queue.shift(); setTimeout(() => Sab.apply(s.type, s.from), 600); }
+    if (Sab.queue.length) { const s = Sab.queue.shift(); setTimeout(() => Sab.apply(s.type, s.from, false, s.cid), 600); }
     else if (S.botRivals && QZ.i >= 1 && Math.random() < 0.15) setTimeout(() => { if (QZ && !QZ.applied && !QZ.answered) Sab.apply(pick(['ink', 'flip', 'fog', 'shuffle', 'freeze']), 'RoboRival 🤖', true); }, 1500 + Math.random() * 3000);
   }
   function answerUI(q, shuffled) {
@@ -1054,12 +1054,12 @@ const Games = (() => {
   // =====================================================================
   const Sab = {
     queue: [], boss: null,
-    incoming(type, from) {
-      if (QZ && !QZ.answered) this.apply(type, from);
-      else { this.queue.push({ type, from, exp: Date.now() + 600000 }); this.queue = this.queue.filter(s => s.exp > Date.now()).slice(-5); if (!QZ) toast(`${SABS[type].e} ${esc(from)} sent you ${SABS[type].name}! It hits in your next quiz 😈`, 'bad'); }
+    incoming(type, from, cid) {
+      if (QZ && !QZ.answered) this.apply(type, from, false, cid);
+      else { this.queue.push({ type, from, cid, exp: Date.now() + 600000 }); this.queue = this.queue.filter(s => s.exp > Date.now()).slice(-5); if (!QZ) toast(`${SABS[type].e} ${esc(from)} sent you ${SABS[type].name}! It hits in your next quiz 😈`, 'bad'); }
     },
     banner(text) { const b = document.createElement('div'); b.className = 'sabbanner'; b.innerHTML = text; document.body.appendChild(b); setTimeout(() => b.remove(), 2600); },
-    apply(type, from, bot) {
+    apply(type, from, bot, cid) {
       if (!QZ) return; QZ.applied = true;
       const s = SABS[type]; this.banner(`${s.e} ${esc(from)} hit you with <b>${s.name}</b>!`);
       const card = $('#qcard'), area = $('#answerArea'); if (!card) return;
@@ -1091,58 +1091,174 @@ const Games = (() => {
         card.addEventListener('pointermove', rub);
       }
       if (type === 'glitch') { QZ.glitchLeft = 4; document.body.classList.add('glitch'); }
-      if (type === 'boss') this.bossFight(from);
+      if (type === 'boss') this.bossFight(from, cid, !!QZ.demo);
     },
     closeBoss() { if (this.boss) { this.boss(); this.boss = null; } },
-    bossFight(from) {
+    bossFight(from, fromCid, demo) {
       if (this.boss) return;
-      QZ.paused++;
-      const m = modal(`<h2 style="text-align:center">👾 The Calculator King attacks!</h2><p class="muted small" style="text-align:center;margin:0 0 8px">Sent by ${esc(from)}. Move the ⭐ with your mouse, finger or arrow keys. Survive <b id="bt">12</b> seconds!</p><canvas id="bc" width="480" height="360" style="display:block;margin:0 auto;background:#140d33;width:100%"></canvas><p class="small" style="text-align:center;margin:8px 0 0">Hits: <b id="bh">0</b></p>`);
+      if (QZ) QZ.paused++;
+      const MAX_HP = 100, BOSS_HP = 400, LIMIT = 15 * 60000, DODGE_MS = 9000;
+      const F = { hp: MAX_HP, bhp: BOSS_HP, turn: 0, phase: 'menu', defend: false, t0: Date.now(), apples: 2, msg: `${esc(from)} summoned the Calculator King! Defeat it, or survive 15 minutes.`, over: false };
+      const m = modal(`
+        <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">👾 The Calculator King</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
+        <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
+        <canvas id="bc" width="480" height="300" style="display:block;margin:0 auto;background:#140d33;width:100%"></canvas>
+        <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
+        <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
+        <div id="bPanel"></div>
+        ${demo ? '<div style="text-align:right;margin-top:8px"><button class="btn sm ghost" id="bEnd">End preview</button></div>' : `<div class="muted small" style="margin-top:8px">Lose all your HP and ${fmt(10000)} of your tokens go to ${esc(from)}.</div>`}`);
+      m.querySelector('.card').style.maxWidth = '640px';
       const cv = $('#bc', m), cx = cv.getContext('2d');
-      const P = { x: 240, y: 300 }; let shots = [], hits = 0, inv = 0, t0 = performance.now(), last = t0, bx = 240, raf, spawnT = 0, keys = {};
-      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * 360 / r.height }; };
-      cv.addEventListener('pointermove', e => { const p = toCanvas(e); P.x = p.x; P.y = Math.max(150, p.y); });
-      cv.addEventListener('pointerdown', e => { const p = toCanvas(e); P.x = p.x; P.y = Math.max(150, p.y); });
-      const kd = e => { if (e.key.startsWith('Arrow')) { keys[e.key] = true; e.preventDefault(); } }, ku = e => { keys[e.key] = false; };
+      const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
+      const ARENA = { x0: 40, x1: 440, y0: 150, y1: 290 };
+      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * 300 / r.height }; };
+      const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
+      const onPtr = e => { if (F.phase !== 'dodge') return; const p = toCanvas(e); P.x = p.x; P.y = p.y; clamp(); };
+      cv.addEventListener('pointermove', onPtr); cv.addEventListener('pointerdown', onPtr);
+      const kd = e => { if (F.phase === 'dodge' && e.key.startsWith('Arrow')) { keys[e.key] = true; e.preventDefault(); } }, ku = e => { keys[e.key] = false; };
       document.addEventListener('keydown', kd); document.addEventListener('keyup', ku);
-      const SYM = ['÷', '×', '+', '−', '%', '=', '√'];
+      const SYM = ['÷', '×', '+', '−', '%', '=', '√', 'π'];
       const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
-      const drawBoss = (x, t) => {
-        cx.save(); cx.translate(x, 70 + Math.sin(t / 300) * 6);
-        cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -74); cx.lineTo(-8, -56); cx.lineTo(0, -80); cx.lineTo(8, -56); cx.lineTo(22, -74); cx.lineTo(34, -52); cx.closePath(); cx.fill();
-        cx.fillStyle = '#6c4cf5'; cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
+      const drawBoss = (x, t, hurt) => {
+        cx.save(); cx.translate(x, 70 + Math.sin(t / 300) * 5); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
+        cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -70); cx.lineTo(-8, -56); cx.lineTo(0, -76); cx.lineTo(8, -56); cx.lineTo(22, -70); cx.lineTo(34, -52); cx.closePath(); cx.fill();
+        cx.fillStyle = hurt ? '#ff5d73' : '#6c4cf5'; cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
         cx.fillStyle = '#9ff0c8'; cx.beginPath(); cx.roundRect(-46, -40, 92, 40, 8); cx.fill();
         cx.strokeStyle = '#140d33'; cx.lineWidth = 4; cx.beginPath(); cx.moveTo(-30, -30); cx.lineTo(-12, -22); cx.moveTo(30, -30); cx.lineTo(12, -22); cx.stroke();
         cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(-18, -13, 4, 0, 7); cx.arc(18, -13, 4, 0, 7); cx.fill();
         for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { cx.fillStyle = c === 3 ? '#ff5d73' : '#efe9ff'; cx.beginPath(); cx.roundRect(-44 + c * 23, 10 + r * 19, 18, 14, 4); cx.fill(); }
         cx.restore();
       };
-      const loop = now => {
-        const dt = Math.min(50, now - last); last = now; const el = now - t0, left = 12 - el / 1000;
-        const sp = 0.32 * dt;
-        if (keys.ArrowLeft) P.x -= sp; if (keys.ArrowRight) P.x += sp; if (keys.ArrowUp) P.y -= sp; if (keys.ArrowDown) P.y += sp;
-        P.x = Math.max(10, Math.min(470, P.x)); P.y = Math.max(150, Math.min(350, P.y));
-        bx = 240 + Math.sin(el / 700) * 150;
-        spawnT -= dt;
-        if (spawnT <= 0) { spawnT = Math.max(130, 380 - el / 40); const n = el > 6000 ? 3 : 2; for (let k = 0; k < n; k++) { const ang = Math.atan2(P.y - 110, P.x - bx) + (Math.random() - 0.5) * 1.1, v = 0.14 + Math.random() * 0.1 + el / 90000; shots.push({ x: bx, y: 110, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, s: pick(SYM) }); } }
-        shots.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; });
-        shots = shots.filter(s => s.x > -20 && s.x < 500 && s.y < 380 && s.y > -20);
-        inv -= dt;
-        if (inv <= 0) for (const s of shots) if (Math.hypot(s.x - P.x, s.y - P.y) < 16) { hits++; inv = 700; $('#bh', m).textContent = hits; break; }
-        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, 360);
-        cx.strokeStyle = 'rgba(255,255,255,.08)'; cx.strokeRect(4, 150, 472, 206);
-        drawBoss(bx, now);
+      let hurtUntil = 0, bx = 240;
+      const render = now => {
+        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, 300);
+        drawBoss(bx, now, now < hurtUntil);
+        cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-        shots.forEach(s => { cx.fillStyle = '#ff5d73'; cx.fillText(s.s, s.x, s.y); });
-        cx.fillStyle = inv > 0 && Math.floor(now / 80) % 2 ? 'rgba(255,201,60,.3)' : '#ffc93c'; star(P.x, P.y, 12);
-        $('#bt', m).textContent = Math.max(0, Math.ceil(left));
-        if (left <= 0) return finish();
+        shots.forEach(s => { cx.fillStyle = s.c || '#ff5d73'; cx.fillText(s.s, s.x, s.y); });
+        if (F.phase === 'dodge') { cx.fillStyle = inv > 0 && Math.floor(now / 80) % 2 ? 'rgba(255,201,60,.3)' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
+      };
+      const ui = () => {
+        $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
+        $('#pHp', m).style.width = (100 * F.hp / MAX_HP) + '%'; $('#pHpT', m).textContent = `${Math.max(0, F.hp)} / ${MAX_HP}${F.defend ? ' · 🛡️ defending' : ''}`;
+        $('#bMsg', m).innerHTML = F.msg;
+      };
+      // ---- player turn ----
+      const menu = () => {
+        if (F.over) return; F.phase = 'menu'; shots = []; render(performance.now()); ui();
+        const it = S.items || {};
+        $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">⚔️ Attack</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn" id="bDef">🛡️ Defend</button></div>
+          <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Defend: halve the damage of the next attack.</div>`;
+        $('#bAtk', m).onclick = attack; $('#bItm', m).onclick = items; $('#bDef', m).onclick = () => { F.defend = true; F.msg = '🛡️ You brace yourself.'; dodge(); };
+      };
+      const attack = () => {
+        F.phase = 'attack'; const q = Quiz.make(S.level, 'Mixed', F.turn < 4 ? 0 : 1); const qStart = Date.now();
+        $('#bPanel', m).innerHTML = `<div style="font-weight:700;margin-bottom:8px">${q.text}</div>` + (q.choices
+          ? `<div class="choices">${q.choices.map((c, i) => `<button class="choice" data-bc="${i}">${esc(c)}</button>`).join('')}</div>`
+          : `<div class="ansrow"><input id="bAns" inputmode="decimal" autocomplete="off" placeholder="Answer to strike"><button class="btn red" id="bGo">Strike!</button></div>`);
+        const go = v => {
+          if (F.phase !== 'attack') return;
+          const ok = Quiz.check(q, v);
+          if (ok) {
+            const fast = Date.now() - qStart < 15000; let dmg = 28 + Math.floor(Math.random() * 16) + (fast ? 12 : 0);
+            F.bhp = Math.max(0, F.bhp - dmg); hurtUntil = performance.now() + 500;
+            let extra = ''; if (Math.random() < 0.25) { F.apples++; extra = ' The boss dropped an 🍎!'; }
+            F.msg = `💥 Correct! You hit for <b>${dmg}</b>${fast ? ' (quick strike!)' : ''}.${extra}`;
+            if (F.bhp <= 0) return end('win');
+          } else F.msg = `❌ Missed! The answer was <b>${esc(Quiz.answerText(q))}</b>.`;
+          dodge();
+        };
+        if (q.choices) $$('[data-bc]', m).forEach(b => b.onclick = () => go(b.dataset.bc));
+        else { const inp = $('#bAns', m); inp.focus(); inp.onkeydown = e => { if (e.key === 'Enter') go(inp.value); }; $('#bGo', m).onclick = () => go(inp.value); }
+      };
+      const items = () => {
+        const it = S.items || (S.items = {}); const pies = it.pie || 0, pots = it.potion || 0;
+        $('#bPanel', m).innerHTML = `<div class="row">
+          <button class="btn sm green" data-it="apple" ${F.apples ? '' : 'disabled'}>🍎 Apple +15 HP (${F.apples})</button>
+          <button class="btn sm green" data-it="pie" ${pies ? '' : 'disabled'}>🥧 Pie +40 HP (${pies})</button>
+          <button class="btn sm green" data-it="potion" ${pots ? '' : 'disabled'}>🧪 Potion full HP (${pots})</button>
+          <button class="btn sm ghost" id="bBack">Back</button></div><div class="muted small" style="margin-top:6px">Buy Pies and Potions in the Shop before a fight. Using an item takes your turn.</div>`;
+        $('#bBack', m).onclick = menu;
+        $$('[data-it]', m).forEach(b => b.onclick = () => {
+          const k = b.dataset.it, before = F.hp;
+          if (k === 'apple') { F.apples--; F.hp = Math.min(MAX_HP, F.hp + 15); }
+          if (k === 'pie') { it.pie--; F.hp = Math.min(MAX_HP, F.hp + 40); }
+          if (k === 'potion') { it.potion--; F.hp = MAX_HP; }
+          Store.save(); F.msg = `💚 You healed ${F.hp - before} HP.`; dodge();
+        });
+      };
+      // ---- boss turn ----
+      const dodge = () => {
+        if (F.over) return;
+        F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
+        dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
+        $('#bPanel', m).innerHTML = '<div class="muted small">Move the ⭐ with your mouse, finger or arrow keys. Every hit costs HP.</div>'; ui();
         raf = requestAnimationFrame(loop);
       };
-      const stop = () => { cancelAnimationFrame(raf); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
-      const finish = () => { stop(); this.boss = null; if (QZ) QZ.paused--; toast(hits === 0 ? '👾 Flawless! The Calculator King retreats.' : `👾 You survived with ${hits} hit${hits === 1 ? '' : 's'}. Back to maths!`, 'good'); };
+      const rage = () => 1 + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
+      const spawn = now => {
+        const pat = F.turn % 4, r = rage(), cxp = bx, cyp = 110;
+        if (pat === 1) { // aimed volley
+          for (let k = 0; k < 3; k++) { const a = Math.atan2(P.y - cyp, P.x - cxp) + (Math.random() - 0.5) * 0.9, v = (0.13 + Math.random() * 0.06) * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: SYM[k % SYM.length] }); }
+          return 420 / r;
+        }
+        if (pat === 2) { // rain
+          for (let k = 0; k < 2; k++) shots.push({ x: ARENA.x0 + Math.random() * (ARENA.x1 - ARENA.x0), y: ARENA.y0 - 20, vx: 0, vy: (0.12 + Math.random() * 0.08) * r, s: SYM[Math.floor(Math.random() * SYM.length)], c: '#3aa0ff' });
+          return 260 / r;
+        }
+        if (pat === 3) { // ring burst
+          const n = 10, off = Math.random() * Math.PI; for (let k = 0; k < n; k++) { const a = off + k * 2 * Math.PI / n, v = 0.11 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '×', c: '#ffc93c' }); }
+          return 900 / r;
+        }
+        // walls with a gap
+        const gap = ARENA.x0 + 40 + Math.random() * (ARENA.x1 - ARENA.x0 - 120);
+        for (let x = ARENA.x0 + 10; x < ARENA.x1; x += 24) if (x < gap || x > gap + 70) shots.push({ x, y: ARENA.y0 - 20, vx: 0, vy: 0.1 * r, s: '=', c: '#20bf8a' });
+        return 1300 / r;
+      };
+      const loop = now => {
+        if (F.over || F.phase !== 'dodge') return;
+        const dt = Math.min(50, now - last); last = now;
+        const sp = 0.3 * dt; if (keys.ArrowLeft) P.x -= sp; if (keys.ArrowRight) P.x += sp; if (keys.ArrowUp) P.y -= sp; if (keys.ArrowDown) P.y += sp; clamp();
+        bx = 240 + Math.sin(now / 700) * 150;
+        spawnT -= dt; if (spawnT <= 0) spawnT = spawn(now);
+        shots.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; });
+        shots = shots.filter(s => s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40);
+        inv -= dt;
+        if (inv <= 0) for (const s of shots) if (s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) {
+          const dmg = Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1)); F.hp = Math.max(0, F.hp - dmg); inv = 650; ui();
+          if (F.hp <= 0) return end('lose');
+          break;
+        }
+        render(now);
+        if (now >= dodgeEnd) { F.defend = false; F.msg = `Your turn! (round ${F.turn + 1})`; menu(); return; }
+        raf = requestAnimationFrame(loop);
+      };
+      // ---- clock + ending ----
+      clockT = setInterval(() => {
+        const left = LIMIT - (Date.now() - F.t0); const el = $('#bTime', m); if (el) el.textContent = mmss(left);
+        if (left <= 0 && !F.over) end('time');
+      }, 500);
+      const stop = () => { F.over = true; cancelAnimationFrame(raf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
+      const end = result => {
+        if (F.over) return; F.over = true; cancelAnimationFrame(raf); clearInterval(clockT); ui();
+        let title, body;
+        if (result === 'win') { title = '🏆 You defeated the Calculator King!'; body = demo ? 'Preview — no tokens.' : '+1,000 🪙 victory bonus.'; if (!demo) addTokens(1000, 'Boss defeated'); }
+        else if (result === 'time') { title = '⏳ You survived 15 minutes!'; body = 'The Calculator King gives up and leaves.'; }
+        else {
+          title = '💀 You ran out of HP…';
+          if (demo) body = `Preview — in a real fight you'd lose ${fmt(10000)} 🪙 to the sender.`;
+          else {
+            const amt = Math.min(10000, S.tokens); S.tokens -= amt; Store.save(); renderHud();
+            if (fromCid && fromCid !== 'bot') Net.send('ack', { to: fromCid, from: Net.cid, loot: amt, name: S.name || 'Player' });
+            body = `${fmt(amt)} 🪙 went to ${esc(from)}.`;
+          }
+        }
+        $('#bPanel', m).innerHTML = `<div style="text-align:center"><h2 style="margin:6px 0">${title}</h2><p>${body}</p><button class="btn green" id="bDone">Back to the quiz</button></div>`;
+        $('#bDone', m).onclick = () => { stop(); this.boss = null; if (QZ) QZ.paused--; };
+      };
+      if (demo) $('#bEnd', m).onclick = () => { stop(); this.boss = null; if (QZ) QZ.paused--; };
       this.boss = () => { stop(); };
-      raf = requestAnimationFrame(loop);
+      render(performance.now()); menu();
     },
   };
 
@@ -1303,7 +1419,7 @@ const Games = (() => {
   // FRIENDS + NETWORK
   // =====================================================================
   const Net = {
-    room: null, cid: Math.random().toString(36).slice(2, 10), peers: [], selected: null, status: 'Online', lastFrom: {},
+    room: null, bossSent: {}, cid: Math.random().toString(36).slice(2, 10), peers: [], selected: null, status: 'Online', lastFrom: {},
     async init() {
       try {
         if (!window.claude || !claude.use) return;
@@ -1318,7 +1434,9 @@ const Games = (() => {
         const unwrap = x => (x && x.to) ? x : (x && x.data && x.data.to) ? x.data : (x && x.payload) || x;
         room.on('sab', x => { const d = unwrap(x); if (!d || d.to !== this.cid || !SABS[d.type]) return; this.receiveSab(d); });
         room.on('msg', x => { const d = unwrap(x); if (!d || d.to !== this.cid) return; this.receiveMsg(d); });
-        room.on('ack', x => { const d = unwrap(x); if (!d || d.to !== this.cid) return; toast(d.blocked ? `🛡️ ${esc(String(d.name).slice(0, 24))} blocked your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} with a shield!` : `😈 Your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} landed on ${esc(String(d.name).slice(0, 24))}!`, d.blocked ? 'bad' : 'good'); });
+        room.on('ack', x => { const d = unwrap(x); if (!d || d.to !== this.cid) return;
+          if (d.loot) { const t = this.bossSent[d.from]; if (t && Date.now() - t < 1800000) { delete this.bossSent[d.from]; addTokens(Math.max(0, Math.min(10000, Math.floor(+d.loot) || 0)), `👾 Loot from ${esc(String(d.name).slice(0, 24))} — the Calculator King won!`); } return; }
+          toast(d.blocked ? `🛡️ ${esc(String(d.name).slice(0, 24))} blocked your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} with a shield!` : `😈 Your ${esc(SABS[d.type] ? SABS[d.type].name : 'sabotage')} landed on ${esc(String(d.name).slice(0, 24))}!`, d.blocked ? 'bad' : 'good'); });
         this.updatePresence();
         if (cur === 'friends') viewFriends();
       } catch (e) { this.room = null; }
@@ -1334,7 +1452,7 @@ const Games = (() => {
       const from = String(d.fromName || 'A friend').slice(0, 24);
       if (S.shields > 0) { S.shields--; Store.save(); toast(`🛡️ Your shield blocked ${esc(from)}'s ${SABS[d.type].name}! (${S.shields} left)`, 'good'); this.send('ack', { to: d.from, blocked: true, type: d.type, name: S.name || 'Player' }); return; }
       this.send('ack', { to: d.from, blocked: false, type: d.type, name: S.name || 'Player' });
-      Sab.incoming(d.type, from);
+      Sab.incoming(d.type, from, d.from);
     },
     receiveMsg(d) {
       const from = esc(String(d.fromName || 'A friend').slice(0, 24));
@@ -1392,7 +1510,7 @@ const Games = (() => {
       $$('[data-st]', tc).forEach(b => b.onclick = () => { if (!spend(STICKER_COST)) return; Bot.say(`${b.dataset.st}?! Rude.`); });
       return;
     }
-    $$('[data-send]', tc).forEach(b => b.onclick = () => { const k = b.dataset.send; if (!spend(SABS[k].cost)) return; if (Net.send('sab', { to: f.cid, from: Net.cid, fromName: S.name || 'Player', type: k })) toast(`${SABS[k].e} ${SABS[k].name} sent to ${esc(f.name)}!`, 'good'); else addTokens(SABS[k].cost); });
+    $$('[data-send]', tc).forEach(b => b.onclick = () => { const k = b.dataset.send; if (!spend(SABS[k].cost)) return; if (Net.send('sab', { to: f.cid, from: Net.cid, fromName: S.name || 'Player', type: k })) { if (k === 'boss') Net.bossSent[f.cid] = Date.now(); toast(`${SABS[k].e} ${SABS[k].name} sent to ${esc(f.name)}!`, 'good'); } else addTokens(SABS[k].cost); });
     $$('[data-msg]', tc).forEach(b => b.onclick = () => { if (!spend(MSG_COST)) return; if (Net.send('msg', { to: f.cid, fromName: S.name || 'Player', text: MSGS[+b.dataset.msg] })) toast('💬 Message sent', 'good'); else addTokens(MSG_COST); });
     $$('[data-st]', tc).forEach(b => b.onclick = () => { if (!spend(STICKER_COST)) return; if (Net.send('msg', { to: f.cid, fromName: S.name || 'Player', sticker: b.dataset.st })) toast(`${b.dataset.st} Sticker sent`, 'good'); else addTokens(STICKER_COST); });
   }
@@ -1450,7 +1568,7 @@ const Games = (() => {
       if (type === 'freeze') { this.frozenUntil = now + 3000; this.next += 3000; }
       if (type === 'shuffle') this.wrongLeft = 3;
       if (type === 'glitch') this.glitchLeft = 3;
-      if (type === 'boss') { this.fx.boss = true; this.next += 8000; this.wrongLeft = Math.max(this.wrongLeft, 1); }
+      if (type === 'boss') { this.fx.boss = true; this.next += 30000; this.wrongLeft = Math.max(this.wrongLeft, 1); }
       this.total = this.next - this.qStart;
       this.say(pick(['Hey! 😠', 'NOOO my circuits! 🤯', 'You will pay for this 😤', 'Not cool, human 😾', 'Rebooting… 🔄']));
       if (S.botRivals && Math.random() < 0.25) setTimeout(() => { toast('🤖 RoboRival is taking revenge…', 'bad'); Sab.incoming(pick(['ink', 'flip', 'fog', 'shuffle']), 'RoboRival 🤖'); }, 2500);
@@ -1485,6 +1603,8 @@ const Games = (() => {
       <div class="grid g2">
         <div class="card"><h3>Avatars</h3><div class="grid g3">${AVATARS.map(([a, c]) => { const own = S.owned.includes(a); return `<button class="sabbtn" data-av="${a}" style="align-items:center;text-align:center;${S.avatar === a ? 'border-color:#6c4cf5' : ''}"><span style="font-size:40px">${a}</span><b>${S.avatar === a ? 'Equipped' : own ? 'Equip' : `🪙 ${fmt(c)}`}</b></button>`; }).join('')}</div></div>
         <div class="card"><h3>Power-ups</h3>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">🥧</span><b>Pie</b><span class="small muted">Heals 40 HP in a boss fight. You have ${(S.items || {}).pie || 0}.</span><button class="btn sm green" data-buy="pie" style="align-self:flex-start">Buy for 500 🪙</button></div>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">🧪</span><b>Potion</b><span class="small muted">Full HP in a boss fight. You have ${(S.items || {}).potion || 0}.</span><button class="btn sm green" data-buy="potion" style="align-self:flex-start">Buy for 1,500 🪙</button></div>
           <div class="sabbtn" style="margin-bottom:10px"><span class="e">🛡️</span><b>Shield</b><span class="small muted">Blocks one sabotage from a friend. You have ${S.shields}.</span><button class="btn sm yellow" id="sh" style="align-self:flex-start">Buy for ${SHIELD_COST} 🪙</button></div>
           <div class="sabbtn"><span class="e">📊</span><b>Your stats</b><span class="small">Quizzes: ${S.stats.quizzes} · Accuracy: ${S.stats.total ? Math.round(100 * S.stats.correct / S.stats.total) : 0}%<br>Chess: ${S.stats.cw} W / ${S.stats.cd} D / ${S.stats.cl} L</span></div>
         </div>
@@ -1495,6 +1615,7 @@ const Games = (() => {
       S.avatar = a; Store.save(); renderHud(); Net.updatePresence(); viewShop();
     });
     $('#sh').onclick = () => { if (spend(SHIELD_COST)) { S.shields++; Store.save(); viewShop(); toast('🛡️ Shield bought', 'good'); } };
+    $$('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, c = k === 'pie' ? 500 : 1500; if (!spend(c)) return; S.items = S.items || {}; S.items[k] = (S.items[k] || 0) + 1; Store.save(); viewShop(); toast(k === 'pie' ? '🥧 Pie bought' : '🧪 Potion bought', 'good'); });
   }
 
   // ---------- boot ----------
