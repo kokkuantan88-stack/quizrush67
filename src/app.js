@@ -316,7 +316,7 @@
       const m = modal(`
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${VENGE ? '😡 The Vengeful Calculator King <span id="vPh" class="tag" style="vertical-align:middle">Phase 1/3</span>' : '👾 The Calculator King'}</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
         <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
-        <div class="bossstage"><canvas id="bc" width="480" height="300" style="background:#140d33"></canvas></div>
+        <div class="bossstage"><canvas id="bc" width="480" height="470" style="background:#140d33"></canvas></div>
         <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
         <div class="small" style="font-weight:800">Mercy <span id="mHpT"></span></div><div class="bar" style="height:8px;margin:2px 0 8px"><i id="mHp" style="background:linear-gradient(90deg,#ffc93c,#ffe08a)"></i></div>
         <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
@@ -325,8 +325,8 @@
       m.classList.add('bossfull'); // full-screen fight: arena shrinks to fit so the buttons always stay on screen
       const cv = $('#bc', m), cx = cv.getContext('2d');
       const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
-      const ARENA = { x0: 40, x1: 440, y0: 150, y1: 290 };
-      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * 300 / r.height }; };
+      const CH_H = 470, ARENA = { x0: 110, x1: 370, y0: 185, y1: 445 }; // square 260×260 dodge box
+      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * CH_H / r.height }; };
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
       let idleRaf = null;
       const say = (t, ms = 3800) => { F.say = t; F.sayUntil = performance.now() + ms; };
@@ -349,7 +349,7 @@
       };
       let hurtUntil = 0, hurtFlash = 0, bx = 240;
       const render = now => {
-        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, 300);
+        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, CH_H);
         drawBoss(bx, now, now < hurtUntil);
         cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
@@ -373,7 +373,7 @@
             if (s.axis === 'h') cx.fillRect(ARENA.x0, s.pos - (live ? 9 : 2), ARENA.x1 - ARENA.x0, live ? 18 : 4); else cx.fillRect(s.pos - (live ? 9 : 2), ARENA.y0, live ? 18 : 4, ARENA.y1 - ARENA.y0);
             return;
           }
-          if (s.bar) { cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
+          if (s.bar) { if (s.x < ARENA.x0 || s.x > ARENA.x1) return; cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
           cx.fillStyle = s.c || '#ff5d73'; if (s.big) { cx.font = 'bold 34px Fredoka, sans-serif'; cx.fillText(s.s, s.x, s.y); cx.font = 'bold 22px Fredoka, sans-serif'; } else cx.fillText(s.s, s.x, s.y);
         });
         if (F.phase === 'dodge' && (F.turn % 10 === 4 || F.turn % 10 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y0 - 10); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y0 - 10); cx.font = 'bold 22px Fredoka, sans-serif'; }
@@ -513,7 +513,7 @@
       const moonSpawn = now => {
         const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 }, n = VENGE && Math.random() < 0.35 ? 2 : 1, dirs = ['U', 'D', 'L', 'R'].sort(() => Math.random() - 0.5).slice(0, n);
         for (const d of dirs) {
-          const st = { U: [C.x, C.y - 150], D: [C.x, 324], L: [C.x - 210, C.y], R: [C.x + 210, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
+          const st = { U: [C.x, C.y - 150], D: [C.x, C.y + 150], L: [C.x - 200, C.y], R: [C.x + 200, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
           shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
         }
         return (VENGE ? 520 : 680) / r;
@@ -590,7 +590,7 @@
         const kids = [];
         shots = shots.filter(s => { if (s.split && s.y >= s.split) { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, v = 0.13 * rage(); kids.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '•', c: '#ff9a3c' }); } return false; } return true; });
         shots.push(...kids);
-        shots = shots.filter(s => (s.laser || s.stomp || s.arm) ? now < s.liveUntil : s.bounce ? now < s.until : (s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40));
+        shots = shots.filter(s => (s.laser || s.stomp || s.arm) ? now < s.liveUntil : s.bounce ? now < s.until : (s.x > -30 && s.x < 510 && s.y < CH_H + 30 && s.y > -40));
         // no invulnerability: every symbol that touches you deals damage, then disappears
         let hitNow = false;
         const dmgNow = () => Math.round((5 + Math.floor(rage() * 2)) * DMG_X * (F.defend ? 0.5 : 1));
