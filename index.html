@@ -1296,7 +1296,7 @@ const Games = (() => {
       const dodge = () => {
         if (F.over) return;
         F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
-        F.moon = F.turn > 1 && Math.random() < 0.25; F.shield = 'U';
+        F.moon = F.turn > 1 && Math.random() < 0.25; F.shield = 'U'; F.moonLast = 0; F.barsFromLeft = Math.random() < 0.5; // bar walls come from one side per round
         dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
         $('#bPanel', m).innerHTML = `<div class="muted small">${F.moon ? '🌙 <b>Moon mode!</b> You can\'t move. Turn your shield with WASD or the arrow keys to block numbers from each side.' : 'Move the ⭐ with WASD or the arrow keys. Every hit costs HP.'}</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
         $$('#bPad button', m).forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); keys[k] = true; }; b.onpointerup = b.onpointerleave = b.onpointercancel = () => { keys[k] = false; }; });
@@ -1307,12 +1307,16 @@ const Games = (() => {
       // moon mode: numbers fly in from the four sides; the shield must face them
       let blocked = 0;
       const moonSpawn = now => {
-        const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 }, n = VENGE && Math.random() < 0.35 ? 2 : 1, dirs = ['U', 'D', 'L', 'R'].sort(() => Math.random() - 0.5).slice(0, n);
-        for (const d of dirs) {
-          const st = { U: [C.x, C.y - 190], D: [C.x, C.y + 190], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
-          shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
-        }
-        return (VENGE ? 520 : 680) / r;
+        // fair by design: one number at a time, each reaching the shield at a scheduled moment,
+        // with arrivals always spaced far enough apart to turn the shield
+        const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 };
+        const travel = 1500 / Math.sqrt(r), gap = Math.max(VENGE ? 380 : 450, (VENGE ? 620 : 760) / Math.sqrt(r));
+        const arrive = Math.max(now + travel, (F.moonLast || 0) + gap); F.moonLast = arrive;
+        const d = pick(['U', 'D', 'L', 'R']);
+        const st = { U: [C.x, C.y - 190], D: [C.x, C.y + 190], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], len = Math.hypot(C.x - st[0], C.y - st[1]);
+        const v = (len - 30) / (arrive - now); // reaches the shield ring (radius 30) exactly at its arrival time
+        shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
+        return gap;
       };
       const rage = () => 1 + (VENGE ? 0.45 : 0) + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
 
@@ -1331,7 +1335,7 @@ const Games = (() => {
       const vSpawn = now => {
         const ph = F.vphase, r = rage(), cxp = bx, cyp = 110;
         const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 0.03, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
-        const bars = () => { const fromLeft = Math.random() < 0.5; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r, vy: 0 }); return 750 / r; };
+        const bars = () => { const fromLeft = F.barsFromLeft; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r, vy: 0 }); return 750 / r; };
         const laser = () => { const h = Math.random() < 0.5; shots.push({ laser: true, axis: h ? 'h' : 'v', pos: h ? (Math.random() < 0.6 ? P.y : ARENA.y0 + 15 + Math.random() * (ARENA.y1 - ARENA.y0 - 30)) : (Math.random() < 0.6 ? P.x : ARENA.x0 + 15 + Math.random() * (ARENA.x1 - ARENA.x0 - 30)), warnUntil: now + 750, liveUntil: now + 1350, x: 240, y: 200, vx: 0, vy: 0 }); return 700 / r; };
         const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0, vy: 0.1, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
         if (ph === 1) return [spiral, bars, () => atk.waves(now, r), () => atk.bouncers(now, r)][F.turn % 4]();
@@ -1358,7 +1362,7 @@ const Games = (() => {
           return 900 / r;
         }
         if (pat === 4 || pat === 5) { // blue bars: stay still · orange bars: keep moving
-          const fromLeft = Math.random() < 0.5, kind = pat === 4 ? (Math.random() < 0.7 ? 'blue' : 'orange') : (Math.random() < 0.5 ? 'blue' : 'orange');
+          const fromLeft = F.barsFromLeft, kind = pat === 4 ? (Math.random() < 0.7 ? 'blue' : 'orange') : (Math.random() < 0.5 ? 'blue' : 'orange');
           shots.push({ bar: true, kind, x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: (ARENA.y0 + ARENA.y1) / 2, vx: (fromLeft ? 1 : -1) * 0.16 * r, vy: 0 });
           if (pat === 5 && Math.random() < 0.5) { const a = Math.atan2(P.y - cyp, P.x - cxp), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: pick(SYM) }); }
           return 1100 / r;
