@@ -1322,7 +1322,15 @@ const Games = (() => {
         shots.forEach(s => { if (s.laser && !s.done && now >= s.warnUntil && Math.abs((s.axis === 'h' ? P.y : P.x) - s.pos) < 13) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } });
         shots.forEach(s => { if (s.bar && !s.done && Math.abs(s.x - P.x) < 15) { const hurts = s.kind === 'blue' ? moving : !moving; if (hurts) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } } });
         shots = shots.filter(s => { if (!s.bar && !s.laser && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
-        if (hitNow) { hurtFlash = now + 150; ui(); if (F.hp <= 0) return end('lose'); }
+        if (hitNow) {
+          hurtFlash = now + 150;
+          if (F.hp <= 0 && VENGE && !F.spared) { // once per fight, the Vengeful King refuses to let you fall
+            F.spared = true; F.hp = MAX_HP; shots = [];
+            say("...No. I'm not as bad as you are.", 7000);
+            F.msg = '💚 The Vengeful King healed you back to full HP. He will not do it twice.';
+          }
+          ui(); if (F.hp <= 0) return end('lose');
+        }
         render(now);
         if (now >= dodgeEnd) { F.defend = false; F.msg = `Your turn! (round ${F.turn + 1})`; menu(); return; }
         raf = requestAnimationFrame(loop);
