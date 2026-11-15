@@ -354,15 +354,29 @@
         cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
         shots.forEach(s => {
+          if (s.stomp) {
+            const live = performance.now() >= s.warnUntil;
+            if (!live) { cx.strokeStyle = 'rgba(255,93,115,.8)'; cx.setLineDash([5, 4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(s.x, s.y, 30, 0, 7); cx.stroke(); cx.setLineDash([]); }
+            else { cx.fillStyle = s.done ? 'rgba(255,93,115,.45)' : '#ff5d73'; cx.beginPath(); cx.arc(s.x, s.y, 30, 0, 7); cx.fill(); cx.fillStyle = '#fff'; cx.fillText('8', s.x, s.y); }
+            return;
+          }
+          if (s.arm) {
+            const nowp = performance.now(), live = nowp >= s.warnUntil, a = armAngle(s, nowp);
+            cx.save(); cx.beginPath(); cx.rect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0); cx.clip();
+            cx.strokeStyle = live ? '#ff2d55' : 'rgba(255,93,115,.35)'; cx.lineWidth = live ? 12 : 3; cx.lineCap = 'round';
+            cx.beginPath(); cx.moveTo(ARM_C.x, ARM_C.y); cx.lineTo(ARM_C.x + Math.cos(a) * ARM_L, ARM_C.y + Math.sin(a) * ARM_L); cx.stroke(); cx.restore();
+            cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.arc(ARM_C.x, ARM_C.y, 7, 0, 7); cx.fill();
+            return;
+          }
           if (s.laser) {
             const live = performance.now() >= s.warnUntil; cx.fillStyle = live ? (s.done ? 'rgba(255,93,115,.4)' : '#ff2d55') : 'rgba(255,93,115,.25)';
             if (s.axis === 'h') cx.fillRect(ARENA.x0, s.pos - (live ? 9 : 2), ARENA.x1 - ARENA.x0, live ? 18 : 4); else cx.fillRect(s.pos - (live ? 9 : 2), ARENA.y0, live ? 18 : 4, ARENA.y1 - ARENA.y0);
             return;
           }
           if (s.bar) { cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
-          cx.fillStyle = s.c || '#ff5d73'; cx.fillText(s.s, s.x, s.y);
+          cx.fillStyle = s.c || '#ff5d73'; if (s.big) { cx.font = 'bold 34px Fredoka, sans-serif'; cx.fillText(s.s, s.x, s.y); cx.font = 'bold 22px Fredoka, sans-serif'; } else cx.fillText(s.s, s.x, s.y);
         });
-        if (F.phase === 'dodge' && (F.turn % 6 === 4 || F.turn % 6 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y0 - 10); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y0 - 10); cx.font = 'bold 22px Fredoka, sans-serif'; }
+        if (F.phase === 'dodge' && (F.turn % 10 === 4 || F.turn % 10 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y0 - 10); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y0 - 10); cx.font = 'bold 22px Fredoka, sans-serif'; }
         if (now < F.sayUntil && F.say) {
           cx.font = 'bold 13px Nunito, sans-serif'; const words = F.say.split(' '), lines = ['']; words.forEach(w => { if ((lines.at(-1) + ' ' + w).length > 28) lines.push(w); else lines[lines.length - 1] = (lines.at(-1) + ' ' + w).trim(); });
           const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = bx > 240 ? bx - 75 - bw : bx + 75, sy = 22;
@@ -479,19 +493,36 @@
         raf = requestAnimationFrame(loop);
       };
       const rage = () => 1 + (VENGE ? 0.45 : 0) + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
+
+      // ---- extra attacks shared by both forms ----
+      const atk = {
+        bouncers: (now, r) => { for (let k = 0; k < 2; k++) { const a = Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 0.15 * r; shots.push({ bounce: true, until: now + 5200, x: bx, y: 110, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '0', c: '#20bf8a' }); } return 1500 / r; },
+        waves: (now, r) => { const left = Math.random() < 0.5, baseY = ARENA.y0 + 18 + Math.random() * (ARENA.y1 - ARENA.y0 - 36); for (let k = 0; k < 5; k++) shots.push({ wave: true, t0: now - k * 120, baseY, amp: 22 + Math.random() * 14, x: left ? ARENA.x0 - 20 - k * 22 : ARENA.x1 + 20 + k * 22, y: baseY, vx: (left ? 1 : -1) * 0.14 * r, vy: 0, s: pick(['1', '2', '3', '4', '5']), c: '#c084fc' }); return 900 / r; },
+        splitters: (now, r) => { shots.push({ split: ARENA.y0 + 30 + Math.random() * (ARENA.y1 - ARENA.y0 - 60), x: ARENA.x0 + 30 + Math.random() * (ARENA.x1 - ARENA.x0 - 60), y: ARENA.y0 - 20, vx: 0, vy: 0.12 * r, s: '÷', c: '#ff9a3c', big: true }); return 1000 / r; },
+        stomps: (now, r) => { shots.push({ stomp: true, x: P.x, y: P.y, warnUntil: now + Math.max(500, 900 / r), liveUntil: now + Math.max(500, 900 / r) + 350, vx: 0, vy: 0 }); return 850 / r; },
+        arm: (now, r) => { if (shots.some(s => s.arm)) return 400; shots.push({ arm: true, start: now, ph0: P.x > ARM_C.x ? Math.PI / 2 : -Math.PI / 2, speed: 0.0012 * r, warnUntil: now + 900, liveUntil: now + 5200, x: 240, y: 220, vx: 0, vy: 0 }); return 600; },
+      };
+      // the arm is a wiper fixed at the top-middle of the arena, swinging side to side
+      const armAngle = (s, now) => Math.PI / 2 + Math.PI * 0.44 * Math.sin(s.ph0 + s.speed * Math.max(0, now - s.warnUntil));
+      const segDist = (px, py, x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); };
+      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 270;
       const vSpawn = now => {
         const ph = F.vphase, r = rage(), cxp = bx, cyp = 110;
         const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 0.03, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
         const bars = () => { const fromLeft = Math.random() < 0.5; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r, vy: 0 }); return 750 / r; };
         const laser = () => { const h = Math.random() < 0.5; shots.push({ laser: true, axis: h ? 'h' : 'v', pos: h ? (Math.random() < 0.6 ? P.y : ARENA.y0 + 15 + Math.random() * (ARENA.y1 - ARENA.y0 - 30)) : (Math.random() < 0.6 ? P.x : ARENA.x0 + 15 + Math.random() * (ARENA.x1 - ARENA.x0 - 30)), warnUntil: now + 750, liveUntil: now + 1350, x: 240, y: 200, vx: 0, vy: 0 }); return 700 / r; };
         const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0, vy: 0.1, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
-        if (ph === 1) return (F.turn % 2 ? spiral : bars)();
-        if (ph === 2) return (F.turn % 2 ? laser : homing)();
-        return pick([spiral, bars, laser, homing, laser])();
+        if (ph === 1) return [spiral, bars, () => atk.waves(now, r), () => atk.bouncers(now, r)][F.turn % 4]();
+        if (ph === 2) return [laser, homing, () => atk.stomps(now, r), () => (Math.random() < 0.5 ? atk.arm(now, r) : laser())][F.turn % 4]();
+        return pick([spiral, bars, laser, homing, () => atk.stomps(now, r), () => atk.arm(now, r), () => atk.splitters(now, r), () => atk.waves(now, r)])();
       };
       const spawn = now => {
         if (VENGE) return vSpawn(now);
-        const pat = F.turn % 6, r = rage(), cxp = bx, cyp = 110;
+        const pat = F.turn % 10, r = rage(), cxp = bx, cyp = 110;
+        if (pat === 6) return atk.bouncers(now, r);
+        if (pat === 7) return atk.waves(now, r);
+        if (pat === 8) return atk.splitters(now, r);
+        if (pat === 9) return atk.stomps(now, r);
         if (pat === 1) { // aimed volley
           for (let k = 0; k < 3; k++) { const a = Math.atan2(P.y - cyp, P.x - cxp) + (Math.random() - 0.5) * 0.9, v = (0.13 + Math.random() * 0.06) * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: SYM[k % SYM.length] }); }
           return 420 / r;
@@ -526,14 +557,23 @@
         shots.forEach(s => {
           if (s.homing > 0) { s.homing -= dt; const a = Math.atan2(P.y - s.y, P.x - s.x), v = 0.16 * rage(); s.vx += (Math.cos(a) * v - s.vx) * 0.04; s.vy += (Math.sin(a) * v - s.vy) * 0.04; }
           s.x += s.vx * dt; s.y += s.vy * dt;
+          if (s.bounce && s.y > ARENA.y0 + 8) { if (s.x < ARENA.x0 + 8 || s.x > ARENA.x1 - 8) { s.vx *= -1; s.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, s.x)); } if (s.y > ARENA.y1 - 8) { s.vy = -Math.abs(s.vy); } else if (s.y < ARENA.y0 + 10 && s.vy < 0) { s.vy = Math.abs(s.vy); } }
+          if (s.wave) s.y = s.baseY + s.amp * Math.sin((now - s.t0) / 220);
         });
-        shots = shots.filter(s => s.laser ? now < s.liveUntil : (s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40));
+        const kids = [];
+        shots = shots.filter(s => { if (s.split && s.y >= s.split) { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, v = 0.13 * rage(); kids.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '•', c: '#ff9a3c' }); } return false; } return true; });
+        shots.push(...kids);
+        shots = shots.filter(s => (s.laser || s.stomp || s.arm) ? now < s.liveUntil : s.bounce ? now < s.until : (s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40));
         // no invulnerability: every symbol that touches you deals damage, then disappears
         let hitNow = false;
         const dmgNow = () => Math.round((5 + Math.floor(rage() * 2)) * DMG_X * (F.defend ? 0.5 : 1));
+        shots.forEach(s => {
+          if (s.stomp && !s.done && now >= s.warnUntil && Math.hypot(P.x - s.x, P.y - s.y) < 34) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.arm && now >= s.warnUntil && (!s.lastHit || now - s.lastHit > 450)) { const a = armAngle(s, now); if (segDist(P.x, P.y, ARM_C.x, ARM_C.y, ARM_C.x + Math.cos(a) * ARM_L, ARM_C.y + Math.sin(a) * ARM_L) < 11) { s.lastHit = now; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } }
+        });
         shots.forEach(s => { if (s.laser && !s.done && now >= s.warnUntil && Math.abs((s.axis === 'h' ? P.y : P.x) - s.pos) < 13) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } });
         shots.forEach(s => { if (s.bar && !s.done && Math.abs(s.x - P.x) < 15) { const hurts = s.kind === 'blue' ? moving : !moving; if (hurts) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } } });
-        shots = shots.filter(s => { if (!s.bar && !s.laser && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
+        shots = shots.filter(s => { if (!s.bar && !s.laser && !s.stomp && !s.arm && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
         if (hitNow) {
           hurtFlash = now + 150;
           if (F.hp <= 0 && VENGE && !F.spared) { // once per fight, the Vengeful King refuses to let you fall
