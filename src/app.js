@@ -627,10 +627,17 @@
         const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0, vy: 0.1, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
         // vengeful-only attacks
         const crossLaser = () => { const w = now + 850, l = now + 1450; shots.push({ laser: true, axis: 'h', pos: P.y, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }, { laser: true, axis: 'v', pos: P.x, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }); return 1250 / r; };
-        const stompGrid = () => { // 3×3 stomps with one safe square
-          const cellW = (ARENA.x1 - ARENA.x0) / 3, cellH = (ARENA.y1 - ARENA.y0) / 3, cell = Math.min(cellW, cellH), safe = Math.floor(Math.random() * 9), w = now + Math.max(800, 1300 / r);
-          for (let k = 0; k < 9; k++) if (k !== safe) shots.push({ stomp: true, rw: cellW - 10, rh: cellH - 10, rad: cell / 2 - 6, x: ARENA.x0 + cellW * (k % 3 + 0.5), y: ARENA.y0 + cellH * (Math.floor(k / 3) + 0.5), warnUntil: w, liveUntil: w + 400, vx: 0, vy: 0 });
-          return 2000 / r;
+        const stompGrid = () => { // 3×3 stomps with one safe square, always next to you and always reachable in time
+          if (shots.some(s => s.stomp && s.rw)) return 300; // never start a new grid before the last one has landed
+          const cellW = (ARENA.x1 - ARENA.x0) / 3, cellH = (ARENA.y1 - ARENA.y0) / 3, cell = Math.min(cellW, cellH);
+          const center = k => [ARENA.x0 + cellW * (k % 3 + 0.5), ARENA.y0 + cellH * (Math.floor(k / 3) + 0.5)];
+          const pc = Math.min(2, Math.max(0, Math.floor((P.x - ARENA.x0) / cellW))), pr = Math.min(2, Math.max(0, Math.floor((P.y - ARENA.y0) / cellH)));
+          const near = []; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { const rr = pr + dr, cc = pc + dc; if ((dr || dc) && rr >= 0 && rr < 3 && cc >= 0 && cc < 3) near.push(rr * 3 + cc); }
+          const safe = pick(near), [sx, sy] = center(safe);
+          const travel = (Math.abs(sx - P.x) + Math.abs(sy - P.y)) / 0.17; // ms to walk there at your speed (worst case, no diagonals)
+          const w = now + travel + 650;
+          for (let k = 0; k < 9; k++) if (k !== safe) { const [x, y] = center(k); shots.push({ stomp: true, rw: cellW - 10, rh: cellH - 10, rad: cell / 2 - 6, x, y, warnUntil: w, liveUntil: w + 400, vx: 0, vy: 0 }); }
+          return travel + 1300;
         };
         const collapseRing = () => { // a ring closes in on you; escape through the gap
           const n = 16, gap = Math.floor(Math.random() * n), v = 0.085 * r;
