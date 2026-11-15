@@ -316,7 +316,7 @@
       const m = modal(`
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${VENGE ? '😡 The Vengeful Calculator King <span id="vPh" class="tag" style="vertical-align:middle">Phase 1/3</span>' : '👾 The Calculator King'}</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
         <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
-        <div class="bossstage"><canvas id="bc" width="480" height="470" style="background:#140d33"></canvas></div>
+        <div class="bossstage"><canvas id="bc" width="480" height="500" style="background:#140d33"></canvas></div>
         <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
         <div class="small" style="font-weight:800">Mercy <span id="mHpT"></span></div><div class="bar" style="height:8px;margin:2px 0 8px"><i id="mHp" style="background:linear-gradient(90deg,#ffc93c,#ffe08a)"></i></div>
         <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
@@ -325,7 +325,7 @@
       m.classList.add('bossfull'); // full-screen fight: arena shrinks to fit so the buttons always stay on screen
       const cv = $('#bc', m), cx = cv.getContext('2d');
       const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
-      const CH_H = 470, ARENA = { x0: 110, x1: 370, y0: 185, y1: 445 }; // square 260×260 dodge box
+      const CH_H = 500, ARENA = { x0: 70, x1: 410, y0: 130, y1: 470 }; // square 340×340 dodge box; labels sit below it
       const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * CH_H / r.height }; };
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
       let idleRaf = null;
@@ -338,7 +338,7 @@
       const SYM = ['÷', '×', '+', '−', '%', '=', '√', 'π'];
       const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
       const drawBoss = (x, t, hurt) => {
-        cx.save(); cx.translate(x, 70 + Math.sin(t / 300) * 5); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
+        cx.save(); cx.translate(x, 64 + Math.sin(t / 300) * 4); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
         cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -70); cx.lineTo(-8, -56); cx.lineTo(0, -76); cx.lineTo(8, -56); cx.lineTo(22, -70); cx.lineTo(34, -52); cx.closePath(); cx.fill();
         cx.fillStyle = hurt ? '#ff5d73' : (VENGE ? ['#8a0f2e', '#8a0f2e', '#5c0a3f', '#2a0712'][F.vphase] : '#6c4cf5'); cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
         cx.fillStyle = '#9ff0c8'; cx.beginPath(); cx.roundRect(-46, -40, 92, 40, 8); cx.fill();
@@ -376,7 +376,7 @@
           if (s.bar) { if (s.x < ARENA.x0 || s.x > ARENA.x1) return; cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
           cx.fillStyle = s.c || '#ff5d73'; if (s.big) { cx.font = 'bold 34px Fredoka, sans-serif'; cx.fillText(s.s, s.x, s.y); cx.font = 'bold 22px Fredoka, sans-serif'; } else cx.fillText(s.s, s.x, s.y);
         });
-        if (F.phase === 'dodge' && (F.turn % 10 === 4 || F.turn % 10 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y0 - 10); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y0 - 10); cx.font = 'bold 22px Fredoka, sans-serif'; }
+        if (F.phase === 'dodge' && (F.turn % 10 === 4 || F.turn % 10 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y1 + 20); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y1 + 20); cx.font = 'bold 22px Fredoka, sans-serif'; }
         if (now < F.sayUntil && F.say) {
           cx.font = 'bold 13px Nunito, sans-serif'; const words = F.say.split(' '), lines = ['']; words.forEach(w => { if ((lines.at(-1) + ' ' + w).length > 28) lines.push(w); else lines[lines.length - 1] = (lines.at(-1) + ' ' + w).trim(); });
           const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = bx > 240 ? bx - 75 - bw : bx + 75, sy = 22;
@@ -389,8 +389,8 @@
           cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(P.x + 6, P.y - 4, 11, 0, 7); cx.fill();
           const a = { R: 0, D: Math.PI / 2, L: Math.PI, U: -Math.PI / 2 }[F.shield];
           cx.strokeStyle = now < blocked ? '#ffffff' : '#3aa0ff'; cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.arc(P.x, P.y, 26, a - 0.6, a + 0.6); cx.stroke();
-          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10);
-        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
+          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y1 + 20);
+        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y1 + 20); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
@@ -513,7 +513,7 @@
       const moonSpawn = now => {
         const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 }, n = VENGE && Math.random() < 0.35 ? 2 : 1, dirs = ['U', 'D', 'L', 'R'].sort(() => Math.random() - 0.5).slice(0, n);
         for (const d of dirs) {
-          const st = { U: [C.x, C.y - 150], D: [C.x, C.y + 150], L: [C.x - 200, C.y], R: [C.x + 200, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
+          const st = { U: [C.x, C.y - 190], D: [C.x, C.y + 190], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
           shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
         }
         return (VENGE ? 520 : 680) / r;
@@ -531,7 +531,7 @@
       // the arm is a wiper fixed at the top-middle of the arena, swinging side to side
       const armAngle = (s, now) => Math.PI / 2 + Math.PI * 0.44 * Math.sin(s.ph0 + s.speed * Math.max(0, now - s.warnUntil));
       const segDist = (px, py, x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); };
-      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 270;
+      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 400;
       const vSpawn = now => {
         const ph = F.vphase, r = rage(), cxp = bx, cyp = 110;
         const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 0.03, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
