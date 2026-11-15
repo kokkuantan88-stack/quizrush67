@@ -316,13 +316,13 @@
       const m = modal(`
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${VENGE ? '😡 The Vengeful Calculator King <span id="vPh" class="tag" style="vertical-align:middle">Phase 1/3</span>' : '👾 The Calculator King'}</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
         <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
-        <canvas id="bc" width="480" height="300" style="display:block;margin:0 auto;background:#140d33;width:100%"></canvas>
+        <div class="bossstage"><canvas id="bc" width="480" height="300" style="background:#140d33"></canvas></div>
         <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
         <div class="small" style="font-weight:800">Mercy <span id="mHpT"></span></div><div class="bar" style="height:8px;margin:2px 0 8px"><i id="mHp" style="background:linear-gradient(90deg,#ffc93c,#ffe08a)"></i></div>
         <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
         <div id="bPanel"></div>
         ${demo ? '<div style="text-align:right;margin-top:8px"><button class="btn sm ghost" id="bEnd">End preview</button></div>' : `<div class="muted small" style="margin-top:8px">Lose all your HP and ${fmt(10000)} of your tokens go to ${esc(from)}.</div>`}`);
-      m.querySelector('.card').style.maxWidth = '640px';
+      m.classList.add('bossfull'); // full-screen fight: arena shrinks to fit so the buttons always stay on screen
       const cv = $('#bc', m), cx = cv.getContext('2d');
       const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
       const ARENA = { x0: 40, x1: 440, y0: 150, y1: 290 };
