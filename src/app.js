@@ -325,7 +325,7 @@
       m.classList.add('bossfull'); // full-screen fight: arena shrinks to fit so the buttons always stay on screen
       const cv = $('#bc', m), cx = cv.getContext('2d');
       const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
-      const CW = 640, CH_H = 420, ARENA = { x0: 236, x1: 616, y0: 20, y1: 400 }; // King on the left, 380×380 dodge box on the right
+      let CW = 640, CH_H = 420; const ARENA = { x0: 16, x1: 624, y0: 140, y1: 390 }; // resized to fill the screen by layout(): King on top, box below
       const AC = { x: (ARENA.x0 + ARENA.x1) / 2, y: (ARENA.y0 + ARENA.y1) / 2 };
       const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * CW / r.width, y: (e.clientY - r.top) * CH_H / r.height }; };
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
@@ -348,7 +348,7 @@
         for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { cx.fillStyle = c === 3 ? '#ff5d73' : '#efe9ff'; cx.beginPath(); cx.roundRect(-44 + c * 23, 10 + r * 19, 18, 14, 4); cx.fill(); }
         cx.restore();
       };
-      let hurtUntil = 0, hurtFlash = 0; const bx = 118; let by = 170; // King's position
+      let hurtUntil = 0, hurtFlash = 0, bx = 320; const by = 68; // King's position (top, sways side to side)
       const render = now => {
         cx.fillStyle = '#140d33'; cx.fillRect(0, 0, CW, CH_H);
         drawBoss(bx, now, now < hurtUntil);
@@ -379,6 +379,13 @@
             cx.fillStyle = '#efe9ff'; for (let k = 0; k < 2; k++) for (let j = 0; j < 2; j++) cx.fillRect(-24 + j * 10, 2 + k * 8, 7, 5);
             cx.restore(); return;
           }
+          if (s.stomp && s.rw) {
+            const live = performance.now() >= s.warnUntil;
+            cx.beginPath(); cx.roundRect(s.x - s.rw / 2, s.y - s.rh / 2, s.rw, s.rh, 12);
+            if (!live) { cx.strokeStyle = 'rgba(255,93,115,.8)'; cx.setLineDash([6, 5]); cx.lineWidth = 2; cx.stroke(); cx.setLineDash([]); }
+            else { cx.fillStyle = s.done ? 'rgba(255,93,115,.45)' : '#ff5d73'; cx.fill(); cx.fillStyle = '#fff'; cx.fillText('8', s.x, s.y); }
+            return;
+          }
           if (s.stomp) {
             const live = performance.now() >= s.warnUntil;
             if (!live) { cx.strokeStyle = 'rgba(255,93,115,.8)'; cx.setLineDash([5, 4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(s.x, s.y, s.rad || 30, 0, 7); cx.stroke(); cx.setLineDash([]); }
@@ -401,12 +408,12 @@
           if (s.bar) { if (s.x < ARENA.x0 || s.x > ARENA.x1) return; cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
           cx.fillStyle = s.c || '#ff5d73'; if (s.big) { cx.font = 'bold 34px Fredoka, sans-serif'; cx.fillText(s.s, s.x, s.y); cx.font = 'bold 22px Fredoka, sans-serif'; } else cx.fillText(s.s, s.x, s.y);
         });
-        if (F.phase === 'dodge' && (!F.grav && !F.moon && (VENGE ? false : (F.turn % 12 === 4 || F.turn % 12 === 5)))) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', bx, CH_H - 58); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', bx, CH_H - 40); cx.font = 'bold 22px Fredoka, sans-serif'; }
+        if (F.phase === 'dodge' && (!F.grav && !F.moon && (VENGE ? false : (F.turn % 12 === 4 || F.turn % 12 === 5)))) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', ARENA.x0 + 70, ARENA.y1 + 18); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', ARENA.x1 - 85, ARENA.y1 + 18); cx.font = 'bold 22px Fredoka, sans-serif'; }
         if (now < F.sayUntil && F.say) {
           cx.font = 'bold 13px Nunito, sans-serif'; const words = F.say.split(' '), lines = ['']; words.forEach(w => { if ((lines.at(-1) + ' ' + w).length > 28) lines.push(w); else lines[lines.length - 1] = (lines.at(-1) + ' ' + w).trim(); });
-          const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = Math.max(6, bx - bw / 2), sy = by + 66;
+          const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, right = bx < CW / 2, sx = right ? bx + 74 : bx - 74 - bw, sy = by - 46;
           cx.fillStyle = '#fff'; cx.beginPath(); cx.roundRect(sx, sy, bw, bh, 10); cx.fill();
-          cx.beginPath(); cx.moveTo(bx - 8, sy); cx.lineTo(bx, sy - 10); cx.lineTo(bx + 8, sy); cx.fill();
+          cx.beginPath(); const tx = right ? sx : sx + bw; cx.moveTo(tx, sy + 14); cx.lineTo(right ? tx - 12 : tx + 12, sy + 22); cx.lineTo(tx, sy + 28); cx.fill();
           cx.fillStyle = '#231a4a'; cx.textAlign = 'left'; lines.forEach((l, i) => cx.fillText(l, sx + 11, sy + 15 + i * 17)); cx.textAlign = 'center';
         }
         if (F.phase === 'dodge' && F.moon) {
@@ -414,8 +421,8 @@
           cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(P.x + 6, P.y - 4, 11, 0, 7); cx.fill();
           const a = { R: 0, D: Math.PI / 2, L: Math.PI, U: -Math.PI / 2 }[F.shield];
           cx.strokeStyle = now < blocked ? '#ffffff' : '#3aa0ff'; cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.arc(P.x, P.y, 26, a - 0.6, a + 0.6); cx.stroke();
-          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, bx, CH_H - 16);
-        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : F.grav ? '#7fe3ff' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, bx, CH_H - 16); }
+          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, CW / 2, ARENA.y1 + 18);
+        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : F.grav ? '#7fe3ff' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, CW / 2, ARENA.y1 + 18); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
@@ -426,7 +433,7 @@
       // ---- player turn ----
       const menu = () => {
         if (F.over) return; F.phase = 'menu'; shots = []; ui();
-        cancelAnimationFrame(idleRaf); const idle = now => { if (F.over || F.phase === 'dodge') return; by = 165 + Math.sin(now / 1400) * 35; render(now); idleRaf = requestAnimationFrame(idle); }; idleRaf = requestAnimationFrame(idle);
+        cancelAnimationFrame(idleRaf); const idle = now => { if (F.over || F.phase === 'dodge') return; bx = CW / 2 + Math.sin(now / 1400) * Math.min(160, CW / 4); render(now); idleRaf = requestAnimationFrame(idle); }; idleRaf = requestAnimationFrame(idle);
         const sp = sparable();
         $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">${trusting() ? '🗡️ Attack (he trusts you…)' : '⚔️ Attack'}</button><button class="btn" id="bTalk" style="background:#3aa0ff;box-shadow:0 4px 0 #2079d1">💬 Talk</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn ghost" id="bDef">🛡️ Defend</button><button class="btn ${sp ? 'yellow' : 'ghost'}" id="bSpare">🕊️ Spare</button></div>
           <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Talk: calm him down. Spare works once he's calm or badly hurt.</div>`;
@@ -545,7 +552,7 @@
         const travel = 1500 / Math.sqrt(r), gap = Math.max(VENGE ? 380 : 450, (VENGE ? 620 : 760) / Math.sqrt(r));
         const arrive = Math.max(now + travel, (F.moonLast || 0) + gap); F.moonLast = arrive;
         const d = pick(['U', 'D', 'L', 'R']);
-        const st = { U: [C.x, C.y - 205], D: [C.x, C.y + 205], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], len = Math.hypot(C.x - st[0], C.y - st[1]);
+        const st = { U: [C.x, ARENA.y0 + 4], D: [C.x, ARENA.y1 - 4], L: [Math.max(ARENA.x0 + 4, C.x - 320), C.y], R: [Math.min(ARENA.x1 - 4, C.x + 320), C.y] }[d], len = Math.hypot(C.x - st[0], C.y - st[1]);
         const v = (len - 30) / (arrive - now); // reaches the shield ring (radius 30) exactly at its arrival time
         shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
         return gap;
@@ -555,13 +562,13 @@
         const r = rage(), fromLeft = F.barsFromLeft;
         if (VENGE && F.vphase === 3 && Math.random() < 0.3) return cannons(now, r);
         const h = 26 + Math.random() * (VENGE ? 52 : 40);
-        shots.push({ spike: true, h, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: ARENA.y1, vx: (fromLeft ? 1 : -1) * (0.15 + Math.random() * 0.04) * r, vy: 0 });
+        shots.push({ spike: true, h, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: ARENA.y1, vx: (fromLeft ? 1 : -1) * (0.15 + Math.random() * 0.04) * r * span(), vy: 0 });
         return Math.max(520, 1050 / r);
       };
       // ruler gates: rulers from the top and bottom with a gap to slip through
       const gates = (now, r) => {
         const fromLeft = F.barsFromLeft, gapH = VENGE ? 92 : 110, gapY = ARENA.y0 + 30 + Math.random() * (ARENA.y1 - ARENA.y0 - 60 - gapH);
-        shots.push({ gate: true, gapY, gapH, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: AC.y, vx: (fromLeft ? 1 : -1) * 0.14 * r, vy: 0 });
+        shots.push({ gate: true, gapY, gapH, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: AC.y, vx: (fromLeft ? 1 : -1) * 0.14 * r * span(), vy: 0 });
         return Math.max(700, 1250 / r);
       };
       // calculator cannons charge at the edge of the box, then fire a thick beam across it
@@ -579,7 +586,7 @@
       // ---- extra attacks shared by both forms ----
       const atk = {
         bouncers: (now, r) => { for (let k = 0; k < 2; k++) { const a = Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 0.15 * r; shots.push({ bounce: true, until: now + 5200, x: ARENA.x0 + 30 + Math.random() * (ARENA.x1 - ARENA.x0 - 60), y: ARENA.y0 + 14, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '0', c: '#20bf8a' }); } return 1500 / r; },
-        waves: (now, r) => { const left = Math.random() < 0.5, baseY = ARENA.y0 + 18 + Math.random() * (ARENA.y1 - ARENA.y0 - 36); for (let k = 0; k < 5; k++) shots.push({ wave: true, t0: now - k * 120, baseY, amp: 22 + Math.random() * 14, x: left ? ARENA.x0 - 20 - k * 22 : ARENA.x1 + 20 + k * 22, y: baseY, vx: (left ? 1 : -1) * 0.14 * r, vy: 0, s: pick(['1', '2', '3', '4', '5']), c: '#c084fc' }); return 900 / r; },
+        waves: (now, r) => { const left = Math.random() < 0.5, baseY = ARENA.y0 + 18 + Math.random() * (ARENA.y1 - ARENA.y0 - 36); for (let k = 0; k < 5; k++) shots.push({ wave: true, t0: now - k * 120, baseY, amp: 22 + Math.random() * 14, x: left ? ARENA.x0 - 20 - k * 22 : ARENA.x1 + 20 + k * 22, y: baseY, vx: (left ? 1 : -1) * 0.14 * r * span(), vy: 0, s: pick(['1', '2', '3', '4', '5']), c: '#c084fc' }); return 900 / r; },
         splitters: (now, r) => { shots.push({ split: ARENA.y0 + 30 + Math.random() * (ARENA.y1 - ARENA.y0 - 60), x: ARENA.x0 + 30 + Math.random() * (ARENA.x1 - ARENA.x0 - 60), y: ARENA.y0 - 20, vx: 0, vy: 0.12 * r, s: '÷', c: '#ff9a3c', big: true }); return 1000 / r; },
         stomps: (now, r) => { shots.push({ stomp: true, x: P.x, y: P.y, warnUntil: now + Math.max(500, 900 / r), liveUntil: now + Math.max(500, 900 / r) + 350, vx: 0, vy: 0 }); return 850 / r; },
         arm: (now, r) => { if (shots.some(s => s.arm)) return 400; shots.push({ arm: true, start: now, ph0: P.x > ARM_C.x ? Math.PI / 2 : -Math.PI / 2, speed: 0.0012 * r, warnUntil: now + 900, liveUntil: now + 5200, x: 240, y: 220, vx: 0, vy: 0 }); return 600; },
@@ -587,18 +594,34 @@
       // the arm is a wiper fixed at the top-middle of the arena, swinging side to side
       const armAngle = (s, now) => Math.PI / 2 + Math.PI * 0.44 * Math.sin(s.ph0 + s.speed * Math.max(0, now - s.warnUntil));
       const segDist = (px, py, x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); };
-      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 440;
+      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }; let ARM_L = 440;
+      // fit the canvas, box and helpers to the space on screen
+      const span = () => Math.max(1, (ARENA.x1 - ARENA.x0) / 420);
+      const layout = () => {
+        const stage = $('.bossstage', m); if (!stage) return;
+        const W = Math.max(320, stage.clientWidth), H = Math.max(260, stage.clientHeight), dpr = window.devicePixelRatio || 1;
+        CW = W; CH_H = H; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ARENA.x0 = 12; ARENA.x1 = W - 12; ARENA.y0 = 136; ARENA.y1 = H - 30;
+        const ox = AC.x, oy = AC.y; AC.x = (ARENA.x0 + ARENA.x1) / 2; AC.y = (ARENA.y0 + ARENA.y1) / 2;
+        ARM_C.x = AC.x; ARM_C.y = ARENA.y0; ARM_L = Math.hypot(ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
+        if (F.phase === 'dodge' && !F.moon) { P.x += AC.x - ox; P.y += AC.y - oy; } else { P.x = AC.x; P.y = AC.y; }
+        P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y));
+        if (F.grav) P.y = Math.min(P.y, ARENA.y1 - 10);
+        render(performance.now());
+      };
+      const ro = window.ResizeObserver ? new ResizeObserver(() => layout()) : null;
+      if (ro) ro.observe($('.bossstage', m)); else window.addEventListener('resize', layout);
       const vSpawn = now => {
         const ph = F.vphase, r = rage(), cxp = bx, cyp = by;
-        const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.abs(Math.cos(a)) * v + 0.03, vy: Math.sin(a) * v, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
-        const bars = () => { const fromLeft = F.barsFromLeft; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r, vy: 0 }); return 750 / r; };
+        const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 0.03, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
+        const bars = () => { const fromLeft = F.barsFromLeft; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r * span(), vy: 0 }); return 750 / r; };
         const laser = () => { const h = Math.random() < 0.5; shots.push({ laser: true, axis: h ? 'h' : 'v', pos: h ? (Math.random() < 0.6 ? P.y : ARENA.y0 + 15 + Math.random() * (ARENA.y1 - ARENA.y0 - 30)) : (Math.random() < 0.6 ? P.x : ARENA.x0 + 15 + Math.random() * (ARENA.x1 - ARENA.x0 - 30)), warnUntil: now + 750, liveUntil: now + 1350, x: 240, y: 200, vx: 0, vy: 0 }); return 700 / r; };
-        const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0.1, vy: 0, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
+        const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0, vy: 0.1, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
         // vengeful-only attacks
         const crossLaser = () => { const w = now + 850, l = now + 1450; shots.push({ laser: true, axis: 'h', pos: P.y, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }, { laser: true, axis: 'v', pos: P.x, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }); return 1250 / r; };
         const stompGrid = () => { // 3×3 stomps with one safe square
-          const cell = (ARENA.x1 - ARENA.x0) / 3, safe = Math.floor(Math.random() * 9), w = now + Math.max(800, 1300 / r);
-          for (let k = 0; k < 9; k++) if (k !== safe) shots.push({ stomp: true, rad: cell / 2 - 6, x: ARENA.x0 + cell * (k % 3 + 0.5), y: ARENA.y0 + cell * (Math.floor(k / 3) + 0.5), warnUntil: w, liveUntil: w + 400, vx: 0, vy: 0 });
+          const cellW = (ARENA.x1 - ARENA.x0) / 3, cellH = (ARENA.y1 - ARENA.y0) / 3, cell = Math.min(cellW, cellH), safe = Math.floor(Math.random() * 9), w = now + Math.max(800, 1300 / r);
+          for (let k = 0; k < 9; k++) if (k !== safe) shots.push({ stomp: true, rw: cellW - 10, rh: cellH - 10, rad: cell / 2 - 6, x: ARENA.x0 + cellW * (k % 3 + 0.5), y: ARENA.y0 + cellH * (Math.floor(k / 3) + 0.5), warnUntil: w, liveUntil: w + 400, vx: 0, vy: 0 });
           return 2000 / r;
         };
         const collapseRing = () => { // a ring closes in on you; escape through the gap
@@ -608,7 +631,7 @@
         };
         const sideVolley = () => { // a column of digits from one side, with one gap
           const fromLeft = F.barsFromLeft, n = 7, gap = Math.floor(Math.random() * (n - 1)), step = (ARENA.y1 - ARENA.y0) / n;
-          for (let k = 0; k < n; k++) { if (k === gap || k === gap + 1) continue; shots.push({ x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: ARENA.y0 + step * (k + 0.5), vx: (fromLeft ? 1 : -1) * 0.15 * r, vy: 0, s: pick(['6', '6', '6', '9']), c: '#ff9a3c' }); }
+          for (let k = 0; k < n; k++) { if (k === gap || k === gap + 1) continue; shots.push({ x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: ARENA.y0 + step * (k + 0.5), vx: (fromLeft ? 1 : -1) * 0.15 * r * span(), vy: 0, s: pick(['6', '6', '6', '9']), c: '#ff9a3c' }); }
           return 1100 / r;
         };
         if (ph === 1) return [spiral, bars, () => atk.waves(now, r), () => atk.bouncers(now, r), sideVolley, () => gates(now, r)][F.turn % 6]();
@@ -637,7 +660,7 @@
         }
         if (pat === 4 || pat === 5) { // blue bars: stay still · orange bars: keep moving
           const fromLeft = F.barsFromLeft, kind = pat === 4 ? (Math.random() < 0.7 ? 'blue' : 'orange') : (Math.random() < 0.5 ? 'blue' : 'orange');
-          shots.push({ bar: true, kind, x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: (ARENA.y0 + ARENA.y1) / 2, vx: (fromLeft ? 1 : -1) * 0.16 * r, vy: 0 });
+          shots.push({ bar: true, kind, x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: (ARENA.y0 + ARENA.y1) / 2, vx: (fromLeft ? 1 : -1) * 0.16 * r * span(), vy: 0 });
           if (pat === 5 && Math.random() < 0.5) { const a = Math.atan2(P.y - cyp, P.x - cxp), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: pick(SYM) }); }
           return 1100 / r;
         }
@@ -661,7 +684,7 @@
         }
         else { const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp(); }
         const moving = Math.abs(P.x - px0) + Math.abs(P.y - py0) > 0.01;
-        by = 165 + Math.sin(now / 700) * 50;
+        bx = CW / 2 + Math.sin(now / 700) * Math.min(220, CW / 3);
         spawnT -= dt; if (spawnT <= 0) spawnT = F.moon ? moonSpawn(now) : F.grav ? gravSpawn(now) : spawn(now);
         shots.forEach(s => {
           if (s.homing > 0) { s.homing -= dt; const a = Math.atan2(P.y - s.y, P.x - s.x), v = 0.16 * rage(); s.vx += (Math.cos(a) * v - s.vx) * 0.04; s.vy += (Math.sin(a) * v - s.vy) * 0.04; }
@@ -680,7 +703,7 @@
           if (s.spike && !s.done && Math.abs(P.x - s.x) < 9 + 8 && P.y > ARENA.y1 - s.h - 8) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
           if (s.gate && !s.done && Math.abs(P.x - s.x) < 10 + 8 && (P.y < s.gapY + 8 || P.y > s.gapY + s.gapH - 8)) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
           if (s.cannon && !s.done && now >= s.warnUntil && Math.abs(((s.side === 'L' || s.side === 'R') ? P.y : P.x) - s.pos) < 22 + 8) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
-          if (s.stomp && !s.done && now >= s.warnUntil && Math.hypot(P.x - s.x, P.y - s.y) < (s.rad || 30) + 4) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.stomp && !s.done && now >= s.warnUntil && (s.rw ? (Math.abs(P.x - s.x) < s.rw / 2 + 4 && Math.abs(P.y - s.y) < s.rh / 2 + 4) : Math.hypot(P.x - s.x, P.y - s.y) < (s.rad || 30) + 4)) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
           if (s.arm && now >= s.warnUntil && (!s.lastHit || now - s.lastHit > 450)) { const a = armAngle(s, now); if (segDist(P.x, P.y, ARM_C.x, ARM_C.y, ARM_C.x + Math.cos(a) * ARM_L, ARM_C.y + Math.sin(a) * ARM_L) < 11) { s.lastHit = now; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } }
         });
         shots.forEach(s => { if (s.laser && !s.done && now >= s.warnUntil && Math.abs((s.axis === 'h' ? P.y : P.x) - s.pos) < 13) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } });
@@ -709,7 +732,7 @@
         const left = LIMIT - (Date.now() - F.t0); const el = $('#bTime', m); if (el) el.textContent = mmss(left);
         if (left <= 0 && !F.over) end('time');
       }, 500);
-      const stop = () => { F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
+      const stop = () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', layout); F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
       const end = result => {
         if (F.over) return; F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); ui(); render(performance.now());
         let title, body;
@@ -732,6 +755,7 @@
       };
       if (demo) $('#bEnd', m).onclick = () => { stop(); this.boss = null; if (QZ) QZ.paused--; };
       this.boss = () => { stop(); };
+      layout();
       say(VENGE ? 'YOU. I remember you, traitor. No mercy this time!' : 'Who dares disturb my calculations?! I am the CALCULATOR KING!', 5000); menu();
     },
   };
