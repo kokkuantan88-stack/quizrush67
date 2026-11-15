@@ -1115,7 +1115,8 @@ const Games = (() => {
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
       const onPtr = e => { if (F.phase !== 'dodge') return; const p = toCanvas(e); P.x = p.x; P.y = p.y; clamp(); };
       cv.addEventListener('pointermove', onPtr); cv.addEventListener('pointerdown', onPtr);
-      const kd = e => { if (F.phase === 'dodge' && e.key.startsWith('Arrow')) { keys[e.key] = true; e.preventDefault(); } }, ku = e => { keys[e.key] = false; };
+      const KEYMAP = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D', a: 'L', d: 'R', w: 'U', s: 'D', A: 'L', D: 'R', W: 'U', S: 'D' };
+      const kd = e => { const k = KEYMAP[e.key]; if (F.phase === 'dodge' && k) { keys[k] = true; e.preventDefault(); } }, ku = e => { const k = KEYMAP[e.key]; if (k) keys[k] = false; };
       document.addEventListener('keydown', kd); document.addEventListener('keyup', ku);
       const SYM = ['÷', '×', '+', '−', '%', '=', '√', 'π'];
       const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
@@ -1129,14 +1130,14 @@ const Games = (() => {
         for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { cx.fillStyle = c === 3 ? '#ff5d73' : '#efe9ff'; cx.beginPath(); cx.roundRect(-44 + c * 23, 10 + r * 19, 18, 14, 4); cx.fill(); }
         cx.restore();
       };
-      let hurtUntil = 0, bx = 240;
+      let hurtUntil = 0, hurtFlash = 0, bx = 240;
       const render = now => {
         cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, 300);
         drawBoss(bx, now, now < hurtUntil);
         cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
         shots.forEach(s => { cx.fillStyle = s.c || '#ff5d73'; cx.fillText(s.s, s.x, s.y); });
-        if (F.phase === 'dodge') { cx.fillStyle = inv > 0 && Math.floor(now / 80) % 2 ? 'rgba(255,201,60,.3)' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
+        if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
@@ -1192,7 +1193,7 @@ const Games = (() => {
         if (F.over) return;
         F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
         dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
-        $('#bPanel', m).innerHTML = '<div class="muted small">Move the ⭐ with your mouse, finger or arrow keys. Every hit costs HP.</div>'; ui();
+        $('#bPanel', m).innerHTML = '<div class="muted small">Move the ⭐ with WASD, the arrow keys, your mouse or your finger. Every hit costs HP.</div>'; ui();
         raf = requestAnimationFrame(loop);
       };
       const rage = () => 1 + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
@@ -1218,17 +1219,15 @@ const Games = (() => {
       const loop = now => {
         if (F.over || F.phase !== 'dodge') return;
         const dt = Math.min(50, now - last); last = now;
-        const sp = 0.3 * dt; if (keys.ArrowLeft) P.x -= sp; if (keys.ArrowRight) P.x += sp; if (keys.ArrowUp) P.y -= sp; if (keys.ArrowDown) P.y += sp; clamp();
+        const sp = 0.3 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp();
         bx = 240 + Math.sin(now / 700) * 150;
         spawnT -= dt; if (spawnT <= 0) spawnT = spawn(now);
         shots.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; });
         shots = shots.filter(s => s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40);
-        inv -= dt;
-        if (inv <= 0) for (const s of shots) if (s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) {
-          const dmg = Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1)); F.hp = Math.max(0, F.hp - dmg); inv = 650; ui();
-          if (F.hp <= 0) return end('lose');
-          break;
-        }
+        // no invulnerability: every symbol that touches you deals damage, then disappears
+        let hitNow = false;
+        shots = shots.filter(s => { if (s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1))); hitNow = true; return false; } return true; });
+        if (hitNow) { hurtFlash = now + 150; ui(); if (F.hp <= 0) return end('lose'); }
         render(now);
         if (now >= dodgeEnd) { F.defend = false; F.msg = `Your turn! (round ${F.turn + 1})`; menu(); return; }
         raf = requestAnimationFrame(loop);
