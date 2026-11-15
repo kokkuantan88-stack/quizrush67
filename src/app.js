@@ -384,11 +384,17 @@
           cx.beginPath(); const tx = bx > 240 ? sx + bw : sx; cx.moveTo(tx, sy + 18); cx.lineTo(bx > 240 ? tx + 12 : tx - 12, sy + 26); cx.lineTo(tx, sy + 30); cx.fill();
           cx.fillStyle = '#231a4a'; cx.textAlign = 'left'; lines.forEach((l, i) => cx.fillText(l, sx + 11, sy + 15 + i * 17)); cx.textAlign = 'center';
         }
-        if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
+        if (F.phase === 'dodge' && F.moon) {
+          cx.fillStyle = now < hurtFlash ? '#ff5d73' : '#ffe08a'; cx.beginPath(); cx.arc(P.x, P.y, 13, 0, 7); cx.fill();
+          cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(P.x + 6, P.y - 4, 11, 0, 7); cx.fill();
+          const a = { R: 0, D: Math.PI / 2, L: Math.PI, U: -Math.PI / 2 }[F.shield];
+          cx.strokeStyle = now < blocked ? '#ffffff' : '#3aa0ff'; cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.arc(P.x, P.y, 26, a - 0.6, a + 0.6); cx.stroke();
+          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10);
+        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
-        $('#pHp', m).style.width = (100 * F.hp / MAX_HP) + '%'; $('#pHpT', m).textContent = `${Math.max(0, F.hp)} / ${MAX_HP}${F.defend ? ' · 🛡️ defending' : ''}`;
+        $('#pHp', m).style.width = (100 * F.hp / MAX_HP) + '%'; $('#pHpT', m).textContent = `${Math.max(0, F.hp)} / ${MAX_HP}${F.defend ? ' · 🛡️ defending' : ''}${F.powerTurns > 0 ? ` · ⚡×1.5 (${F.powerTurns})` : ''}${F.nextX ? ' · 🔥×2.5 next' : ''}${F.flat ? ` · 📐+${F.flat}` : ''}`;
         $('#bMsg', m).innerHTML = F.msg;
         $('#mHp', m).style.width = Math.min(100, F.mercy) + '%'; $('#mHpT', m).textContent = VENGE ? '🚫 Unsparable — he remembers what you did' : sparable() ? '💛 He can be spared!' : `${Math.min(100, F.mercy)}%`;
       };
@@ -447,8 +453,10 @@
         const go = v => {
           if (F.phase !== 'attack') return;
           const ok = Quiz.check(q, v);
+          const pMul = F.powerTurns > 0 ? 1.5 : 1, fMul = F.nextX || 1; if (F.powerTurns > 0) F.powerTurns--; F.nextX = 0; // buffs are used up by any attack
           if (ok) {
-            const fast = Date.now() - qStart < 15000; let dmg = 28 + Math.floor(Math.random() * 16) + (fast ? 12 : 0);
+            const fast = Date.now() - qStart < 15000; let dmg = 28 + Math.floor(Math.random() * 16) + (fast ? 12 : 0) + (F.flat || 0);
+            dmg = Math.round(dmg * pMul * fMul);
             F.bhp = Math.max(0, F.bhp - dmg); hurtUntil = performance.now() + 500;
             let extra = ''; if (Math.random() < 0.25) { F.apples++; extra = ' The boss dropped an 🍎!'; }
             F.msg = `💥 Correct! You hit for <b>${dmg}</b>${fast ? ' (quick strike!)' : ''}.${extra}`;
@@ -467,17 +475,24 @@
       };
       const items = () => {
         const it = S.items || (S.items = {}); const pies = it.pie || 0, pots = it.potion || 0;
-        $('#bPanel', m).innerHTML = `<div class="row">
+        $('#bPanel', m).innerHTML = `<div class="small" style="font-weight:800;margin-bottom:4px">Heal</div><div class="row">
           <button class="btn sm green" data-it="apple" ${F.apples ? '' : 'disabled'}>🍎 Apple +15 HP (${F.apples})</button>
           <button class="btn sm green" data-it="pie" ${pies ? '' : 'disabled'}>🥧 Pie +40 HP (${pies})</button>
           <button class="btn sm green" data-it="potion" ${pots ? '' : 'disabled'}>🧪 Potion full HP (${pots})</button>
-          <button class="btn sm ghost" id="bBack">Back</button></div><div class="muted small" style="margin-top:6px">Buy Pies and Potions in the Shop before a fight. Using an item takes your turn.</div>`;
+          </div><div class="small" style="font-weight:800;margin:10px 0 4px">Power up</div><div class="row">
+          <button class="btn sm red" data-it="pencil" ${it.pencil ? '' : 'disabled'}>⚡ Power Pencil: ×1.5 damage for 3 attacks (${it.pencil || 0})</button>
+          <button class="btn sm red" data-it="ruler" ${it.ruler ? '' : 'disabled'}>🔥 Fire Ruler: next attack ×2.5 (${it.ruler || 0})</button>
+          <button class="btn sm red" data-it="compass" ${it.compass ? '' : 'disabled'}>📐 Sharp Compass: +12 damage for this fight (${it.compass || 0})</button>
+          <button class="btn sm ghost" id="bBack">Back</button></div><div class="muted small" style="margin-top:6px">Buy items in the Shop before a fight. Using an item takes your turn.</div>`;
         $('#bBack', m).onclick = menu;
         $$('[data-it]', m).forEach(b => b.onclick = () => {
           const k = b.dataset.it, before = F.hp;
           if (k === 'apple') { F.apples--; F.hp = Math.min(MAX_HP, F.hp + 15); }
           if (k === 'pie') { it.pie--; F.hp = Math.min(MAX_HP, F.hp + 40); }
           if (k === 'potion') { it.potion--; F.hp = MAX_HP; }
+          if (k === 'pencil') { it.pencil--; F.powerTurns = 3; Store.save(); F.msg = '⚡ Power Pencil! Your next 3 attacks deal ×1.5 damage.'; say('Is that... a mechanical pencil?!'); return dodge(); }
+          if (k === 'ruler') { it.ruler--; F.nextX = 2.5; Store.save(); F.msg = '🔥 Fire Ruler! Your next attack deals ×2.5 damage.'; say('Put that ruler DOWN!'); return dodge(); }
+          if (k === 'compass') { it.compass--; F.flat = (F.flat || 0) + 12; Store.save(); F.msg = `📐 Sharp Compass! +${F.flat} damage on every attack this fight.`; say('Ow, that thing is POINTY.'); return dodge(); }
           Store.save(); F.msg = `💚 You healed ${F.hp - before} HP.`; dodge();
         });
       };
@@ -485,12 +500,23 @@
       const dodge = () => {
         if (F.over) return;
         F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
+        F.moon = F.turn > 1 && Math.random() < 0.25; F.shield = 'U';
         dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
-        $('#bPanel', m).innerHTML = `<div class="muted small">Move the ⭐ with WASD or the arrow keys. Every hit costs HP.</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
+        $('#bPanel', m).innerHTML = `<div class="muted small">${F.moon ? '🌙 <b>Moon mode!</b> You can\'t move. Turn your shield with WASD or the arrow keys to block numbers from each side.' : 'Move the ⭐ with WASD or the arrow keys. Every hit costs HP.'}</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
         $$('#bPad button', m).forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); keys[k] = true; }; b.onpointerup = b.onpointerleave = b.onpointercancel = () => { keys[k] = false; }; });
-        cancelAnimationFrame(idleRaf); if (F.turn === 1 && !F.say) say('Who dares disturb my calculations?!');
+        cancelAnimationFrame(idleRaf); if (F.moon) say(pick(['To the MOON with you!', 'Let\'s see you block THIS!', 'No running this time!']), 2500); else if (F.turn === 1 && !F.say) say('Who dares disturb my calculations?!');
         else if (!(performance.now() < F.sayUntil)) say(pick(VENGE ? ['This is for last time!', 'Divide and CONQUER!', 'Feel my betrayal, squared!', 'No remainder. No mercy.'] : ['Dodge THIS!', 'Feel the power of long division!', 'Have some fractions!', 'I hope you revised!', 'Times tables, ATTACK!']), 2500);
         raf = requestAnimationFrame(loop);
+      };
+      // moon mode: numbers fly in from the four sides; the shield must face them
+      let blocked = 0;
+      const moonSpawn = now => {
+        const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 }, n = VENGE && Math.random() < 0.35 ? 2 : 1, dirs = ['U', 'D', 'L', 'R'].sort(() => Math.random() - 0.5).slice(0, n);
+        for (const d of dirs) {
+          const st = { U: [C.x, C.y - 150], D: [C.x, 324], L: [C.x - 210, C.y], R: [C.x + 210, C.y] }[d], v = 0.11 * r, len = Math.hypot(C.x - st[0], C.y - st[1]);
+          shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
+        }
+        return (VENGE ? 520 : 680) / r;
       };
       const rage = () => 1 + (VENGE ? 0.45 : 0) + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
 
@@ -550,10 +576,11 @@
         if (F.over || F.phase !== 'dodge') return;
         const dt = Math.min(50, now - last); last = now;
         const px0 = P.x, py0 = P.y;
-        const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp();
+        if (F.moon) { for (const k of ['U', 'D', 'L', 'R']) if (keys[k]) F.shield = k; }
+        else { const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp(); }
         const moving = Math.abs(P.x - px0) + Math.abs(P.y - py0) > 0.01;
         bx = 240 + Math.sin(now / 700) * 150;
-        spawnT -= dt; if (spawnT <= 0) spawnT = spawn(now);
+        spawnT -= dt; if (spawnT <= 0) spawnT = F.moon ? moonSpawn(now) : spawn(now);
         shots.forEach(s => {
           if (s.homing > 0) { s.homing -= dt; const a = Math.atan2(P.y - s.y, P.x - s.x), v = 0.16 * rage(); s.vx += (Math.cos(a) * v - s.vx) * 0.04; s.vy += (Math.sin(a) * v - s.vy) * 0.04; }
           s.x += s.vx * dt; s.y += s.vy * dt;
@@ -573,7 +600,12 @@
         });
         shots.forEach(s => { if (s.laser && !s.done && now >= s.warnUntil && Math.abs((s.axis === 'h' ? P.y : P.x) - s.pos) < 13) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } });
         shots.forEach(s => { if (s.bar && !s.done && Math.abs(s.x - P.x) < 15) { const hurts = s.kind === 'blue' ? moving : !moving; if (hurts) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } } });
-        shots = shots.filter(s => { if (!s.bar && !s.laser && !s.stomp && !s.arm && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
+        shots = shots.filter(s => {
+          if (!s.moonShot) return true;
+          if (Math.hypot(s.x - P.x, s.y - P.y) < 30) { if (s.dir === F.shield) { blocked = now + 120; return false; } F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; }
+          return true;
+        });
+        shots = shots.filter(s => { if (!s.moonShot && !s.bar && !s.laser && !s.stomp && !s.arm && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
         if (hitNow) {
           hurtFlash = now + 150;
           if (F.hp <= 0 && VENGE && !F.spared) { // once per fight, the Vengeful King refuses to let you fall
@@ -962,6 +994,9 @@
         <div class="card"><h3>Power-ups</h3>
           <div class="sabbtn" style="margin-bottom:10px"><span class="e">🥧</span><b>Pie</b><span class="small muted">Heals 40 HP in a boss fight. You have ${(S.items || {}).pie || 0}.</span><button class="btn sm green" data-buy="pie" style="align-self:flex-start">Buy for 500 🪙</button></div>
           <div class="sabbtn" style="margin-bottom:10px"><span class="e">🧪</span><b>Potion</b><span class="small muted">Full HP in a boss fight. You have ${(S.items || {}).potion || 0}.</span><button class="btn sm green" data-buy="potion" style="align-self:flex-start">Buy for 1,500 🪙</button></div>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">⚡</span><b>Power Pencil</b><span class="small muted">×1.5 damage for 3 attacks in a boss fight. You have ${(S.items || {}).pencil || 0}.</span><button class="btn sm red" data-buy="pencil" style="align-self:flex-start">Buy for 800 🪙</button></div>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">🔥</span><b>Fire Ruler</b><span class="small muted">Your next attack deals ×2.5 damage. You have ${(S.items || {}).ruler || 0}.</span><button class="btn sm red" data-buy="ruler" style="align-self:flex-start">Buy for 1,200 🪙</button></div>
+          <div class="sabbtn" style="margin-bottom:10px"><span class="e">📐</span><b>Sharp Compass</b><span class="small muted">+12 damage on every attack for the rest of the fight. You have ${(S.items || {}).compass || 0}.</span><button class="btn sm red" data-buy="compass" style="align-self:flex-start">Buy for 1,500 🪙</button></div>
           <div class="sabbtn" style="margin-bottom:10px"><span class="e">🛡️</span><b>Shield</b><span class="small muted">Blocks one sabotage from a friend. You have ${S.shields}.</span><button class="btn sm yellow" id="sh" style="align-self:flex-start">Buy for ${SHIELD_COST} 🪙</button></div>
           <div class="sabbtn"><span class="e">📊</span><b>Your stats</b><span class="small">Quizzes: ${S.stats.quizzes} · Accuracy: ${S.stats.total ? Math.round(100 * S.stats.correct / S.stats.total) : 0}%<br>Chess: ${S.stats.cw} W / ${S.stats.cd} D / ${S.stats.cl} L</span></div>
         </div>
@@ -972,7 +1007,7 @@
       S.avatar = a; Store.save(); renderHud(); Net.updatePresence(); viewShop();
     });
     $('#sh').onclick = () => { if (spend(SHIELD_COST)) { S.shields++; Store.save(); viewShop(); toast('🛡️ Shield bought', 'good'); } };
-    $$('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, c = k === 'pie' ? 500 : 1500; if (!spend(c)) return; S.items = S.items || {}; S.items[k] = (S.items[k] || 0) + 1; Store.save(); viewShop(); toast(k === 'pie' ? '🥧 Pie bought' : '🧪 Potion bought', 'good'); });
+    $$('[data-buy]').forEach(b => b.onclick = () => { const k = b.dataset.buy, c = { pie: 500, potion: 1500, pencil: 800, ruler: 1200, compass: 1500 }[k], nm = { pie: '🥧 Pie', potion: '🧪 Potion', pencil: '⚡ Power Pencil', ruler: '🔥 Fire Ruler', compass: '📐 Sharp Compass' }[k]; if (!spend(c)) return; S.items = S.items || {}; S.items[k] = (S.items[k] || 0) + 1; Store.save(); viewShop(); toast(`${nm} bought`, 'good'); });
   }
 
   // ---------- boot ----------
