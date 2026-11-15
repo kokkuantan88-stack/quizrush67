@@ -22,7 +22,7 @@
     shuffle: { name: 'Shuffle', e: '🔀', cost: 250, desc: 'Keypad and options scramble for 2 questions' },
     fog: { name: 'Fog', e: '🌫️', cost: 300, desc: 'The question blurs; they rub to clear it' },
     glitch: { name: 'Glitch Theme', e: '💖', cost: 400, desc: 'Pink comic-font quiz for 3 questions' },
-    boss: { name: 'Boss Fight', e: '👾', cost: 7000, desc: 'Turn-based fight vs the Calculator King, up to 15 min. If they lose all HP, you get 10,000 of their tokens' },
+    boss: { name: 'Boss Fight', e: '👾', cost: 7000, desc: 'Turn-based fight vs the talking Calculator King, up to 15 min. If they lose all HP, you get 10,000 of their tokens' },
   };
   const MSGS = ['Good luck! 🍀', "Bet you can't beat my score 😏", 'GG 🤝', 'Study harder! 📚', 'You got this 💪', 'Nice try 😂', 'Race you to 10/10 🏁'];
   const STICKERS = ['🐔', '🔥', '👻', '🦆', '💥', '🍕', '🤡', '🐸'];
@@ -39,7 +39,7 @@
   const Store = {
     db: null, doc: null, timer: null,
     load() { try { const raw = localStorage.getItem('mathquest'); if (raw) S = Object.assign(blank(), JSON.parse(raw)); } catch (e) {} this.fixDay(); },
-    fixDay() { if (S.day.date !== today()) S.day = { date: today(), easy: 0, quizzes: 0 }; },
+    fixDay() { if (S.day.date !== today()) S.day = { date: today(), easy: 0, quizzes: 0 }; if (!S.starterGiven) { S.starterGiven = true; S.tokens += 10000; this.gift = true; } },
     save() { S.savedAt = Date.now(); try { localStorage.setItem('mathquest', JSON.stringify(S)); } catch (e) {}
       clearTimeout(this.timer); this.timer = setTimeout(() => { if (this.doc) { try { const p = this.doc.set(JSON.parse(JSON.stringify(S))); if (p && p.catch) p.catch(() => {}); } catch (e) {} } }, 1200); },
     async connect() {
@@ -310,12 +310,13 @@
       if (this.boss) return;
       if (QZ) QZ.paused++;
       const MAX_HP = 100, BOSS_HP = 400, LIMIT = 15 * 60000, DODGE_MS = 9000;
-      const F = { hp: MAX_HP, bhp: BOSS_HP, turn: 0, phase: 'menu', defend: false, t0: Date.now(), apples: 2, msg: `${esc(from)} summoned the Calculator King! Defeat it, or survive 15 minutes.`, over: false };
+      const F = { hp: MAX_HP, bhp: BOSS_HP, turn: 0, phase: 'menu', defend: false, t0: Date.now(), apples: 2, mercy: 0, say: '', sayUntil: 0, msg: `${esc(from)} summoned the Calculator King! Defeat him, spare him, or survive 15 minutes.`, over: false };
       const m = modal(`
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">👾 The Calculator King</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
         <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
         <canvas id="bc" width="480" height="300" style="display:block;margin:0 auto;background:#140d33;width:100%"></canvas>
         <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
+        <div class="small" style="font-weight:800">Mercy <span id="mHpT"></span></div><div class="bar" style="height:8px;margin:2px 0 8px"><i id="mHp" style="background:linear-gradient(90deg,#ffc93c,#ffe08a)"></i></div>
         <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
         <div id="bPanel"></div>
         ${demo ? '<div style="text-align:right;margin-top:8px"><button class="btn sm ghost" id="bEnd">End preview</button></div>' : `<div class="muted small" style="margin-top:8px">Lose all your HP and ${fmt(10000)} of your tokens go to ${esc(from)}.</div>`}`);
@@ -325,8 +326,9 @@
       const ARENA = { x0: 40, x1: 440, y0: 150, y1: 290 };
       const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * 300 / r.height }; };
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
-      const onPtr = e => { if (F.phase !== 'dodge') return; const p = toCanvas(e); P.x = p.x; P.y = p.y; clamp(); };
-      cv.addEventListener('pointermove', onPtr); cv.addEventListener('pointerdown', onPtr);
+      let idleRaf = null;
+      const say = (t, ms = 3800) => { F.say = t; F.sayUntil = performance.now() + ms; };
+      const sparable = () => F.mercy >= 100 || F.bhp <= BOSS_HP * 0.25;
       const KEYMAP = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D', a: 'L', d: 'R', w: 'U', s: 'D', A: 'L', D: 'R', W: 'U', S: 'D' };
       const kd = e => { const k = KEYMAP[e.key]; if (F.phase === 'dodge' && k) { keys[k] = true; e.preventDefault(); } }, ku = e => { const k = KEYMAP[e.key]; if (k) keys[k] = false; };
       document.addEventListener('keydown', kd); document.addEventListener('keyup', ku);
@@ -348,21 +350,54 @@
         drawBoss(bx, now, now < hurtUntil);
         cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-        shots.forEach(s => { cx.fillStyle = s.c || '#ff5d73'; cx.fillText(s.s, s.x, s.y); });
+        shots.forEach(s => {
+          if (s.bar) { cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
+          cx.fillStyle = s.c || '#ff5d73'; cx.fillText(s.s, s.x, s.y);
+        });
+        if (F.phase === 'dodge' && (F.turn % 6 === 4 || F.turn % 6 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y0 - 10); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y0 - 10); cx.font = 'bold 22px Fredoka, sans-serif'; }
+        if (now < F.sayUntil && F.say) {
+          cx.font = 'bold 13px Nunito, sans-serif'; const words = F.say.split(' '), lines = ['']; words.forEach(w => { if ((lines.at(-1) + ' ' + w).length > 28) lines.push(w); else lines[lines.length - 1] = (lines.at(-1) + ' ' + w).trim(); });
+          const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = bx > 240 ? bx - 75 - bw : bx + 75, sy = 22;
+          cx.fillStyle = '#fff'; cx.beginPath(); cx.roundRect(sx, sy, bw, bh, 10); cx.fill();
+          cx.beginPath(); const tx = bx > 240 ? sx + bw : sx; cx.moveTo(tx, sy + 18); cx.lineTo(bx > 240 ? tx + 12 : tx - 12, sy + 26); cx.lineTo(tx, sy + 30); cx.fill();
+          cx.fillStyle = '#231a4a'; cx.textAlign = 'left'; lines.forEach((l, i) => cx.fillText(l, sx + 11, sy + 15 + i * 17)); cx.textAlign = 'center';
+        }
         if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y0 - 10); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
         $('#pHp', m).style.width = (100 * F.hp / MAX_HP) + '%'; $('#pHpT', m).textContent = `${Math.max(0, F.hp)} / ${MAX_HP}${F.defend ? ' · 🛡️ defending' : ''}`;
         $('#bMsg', m).innerHTML = F.msg;
+        $('#mHp', m).style.width = Math.min(100, F.mercy) + '%'; $('#mHpT', m).textContent = sparable() ? '💛 He can be spared!' : `${Math.min(100, F.mercy)}%`;
       };
       // ---- player turn ----
       const menu = () => {
-        if (F.over) return; F.phase = 'menu'; shots = []; render(performance.now()); ui();
-        const it = S.items || {};
-        $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">⚔️ Attack</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn" id="bDef">🛡️ Defend</button></div>
-          <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Defend: halve the damage of the next attack.</div>`;
-        $('#bAtk', m).onclick = attack; $('#bItm', m).onclick = items; $('#bDef', m).onclick = () => { F.defend = true; F.msg = '🛡️ You brace yourself.'; dodge(); };
+        if (F.over) return; F.phase = 'menu'; shots = []; ui();
+        cancelAnimationFrame(idleRaf); const idle = now => { if (F.over || F.phase === 'dodge') return; bx = 240 + Math.sin(now / 1400) * 120; render(now); idleRaf = requestAnimationFrame(idle); }; idleRaf = requestAnimationFrame(idle);
+        const sp = sparable();
+        $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">⚔️ Attack</button><button class="btn" id="bTalk" style="background:#3aa0ff;box-shadow:0 4px 0 #2079d1">💬 Talk</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn ghost" id="bDef">🛡️ Defend</button><button class="btn ${sp ? 'yellow' : 'ghost'}" id="bSpare">🕊️ Spare</button></div>
+          <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Talk: calm him down. Spare works once he's calm or badly hurt.</div>`;
+        $('#bAtk', m).onclick = attack; $('#bItm', m).onclick = items; $('#bTalk', m).onclick = talk;
+        $('#bDef', m).onclick = () => { F.defend = true; F.msg = '🛡️ You brace yourself.'; say(pick(['Hiding behind a shield? How very... divisive.', 'Defend all you like. I have infinite digits!'])); dodge(); };
+        $('#bSpare', m).onclick = () => {
+          if (sparable()) { say('...Fine. You may go. Study hard, little number cruncher.', 6000); return end('spare'); }
+          F.msg = "🕊️ He isn't ready to be spared yet."; say(pick(['SPARE me? I am the KING! Ha!', 'Mercy does not compute!', 'Try harder, human.'])); dodge();
+        };
+      };
+      const TALK = {
+        buttons: { label: '😊 Compliment his buttons', gain: 25, lines: ['My buttons? ...They ARE rather shiny.', 'Hmph. Flattery will get you... partway.', 'Nobody ever notices the % key. Thank you.'] },
+        joke: { label: '😂 Tell a maths joke', gain: 35, jokes: ['Why was 6 afraid of 7? Because 7 8 9!', 'Parallel lines have so much in common. Shame they never meet.', 'I would tell you a joke about infinity, but it never ends.', 'Why did the obtuse angle go to the beach? It was over 90 degrees.'], lines: ['Ha... HA HA! Error: too funny!', 'Okay, that one got me. Beep.', '*snort* ...I did NOT laugh.'] },
+        crown: { label: '👑 Ask about his crown', gain: 20, lines: ['I won it in the Great Long Division War of 1987.', 'It is heavy. Being king of maths is lonely.', 'You like it? Nobody ever asks about the crown...'] },
+      };
+      const talk = () => {
+        F.phase = 'talk';
+        $('#bPanel', m).innerHTML = `<div class="row">${Object.entries(TALK).map(([k, t]) => `<button class="btn sm" style="background:#3aa0ff;box-shadow:0 4px 0 #2079d1" data-tk="${k}">${t.label}</button>`).join('')}<button class="btn sm ghost" id="bBack">Back</button></div>`;
+        $('#bBack', m).onclick = menu;
+        $$('[data-tk]', m).forEach(b => b.onclick = () => {
+          const t = TALK[b.dataset.tk]; F.mercy = Math.min(100, F.mercy + t.gain);
+          F.msg = b.dataset.tk === 'joke' ? `😂 You: "${pick(t.jokes)}"` : `💬 You ${b.dataset.tk === 'buttons' ? 'compliment his buttons' : 'ask about his crown'}.`;
+          say(sparable() ? '...Maybe we don\'t have to fight after all.' : pick(t.lines), 5000); dodge();
+        });
       };
       const attack = () => {
         F.phase = 'attack'; const q = Quiz.make(S.level, 'Mixed', F.turn < 4 ? 0 : 1); const qStart = Date.now();
@@ -377,8 +412,9 @@
             F.bhp = Math.max(0, F.bhp - dmg); hurtUntil = performance.now() + 500;
             let extra = ''; if (Math.random() < 0.25) { F.apples++; extra = ' The boss dropped an 🍎!'; }
             F.msg = `💥 Correct! You hit for <b>${dmg}</b>${fast ? ' (quick strike!)' : ''}.${extra}`;
+            say(F.bhp <= BOSS_HP * 0.25 ? pick(['My battery... is running low...', 'Please... I just wanted to be good at sums...']) : pick(['OUCH! My buttons!', 'You carried the one?! Impossible!', 'Lucky guess, human!', 'ERR... ERR... recalculating!']));
             if (F.bhp <= 0) return end('win');
-          } else F.msg = `❌ Missed! The answer was <b>${esc(Quiz.answerText(q))}</b>.`;
+          } else { F.msg = `❌ Missed! The answer was <b>${esc(Quiz.answerText(q))}</b>.`; say(pick(['HA! Wrong! Back to the textbook!', 'Did you even show your working?', 'Even a calculator with no batteries knows that one!'])); }
           dodge();
         };
         if (q.choices) $$('[data-bc]', m).forEach(b => b.onclick = () => go(b.dataset.bc));
@@ -405,23 +441,32 @@
         if (F.over) return;
         F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
         dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
-        $('#bPanel', m).innerHTML = '<div class="muted small">Move the ⭐ with WASD, the arrow keys, your mouse or your finger. Every hit costs HP.</div>'; ui();
+        $('#bPanel', m).innerHTML = `<div class="muted small">Move the ⭐ with WASD or the arrow keys. Every hit costs HP.</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
+        $$('#bPad button', m).forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); keys[k] = true; }; b.onpointerup = b.onpointerleave = b.onpointercancel = () => { keys[k] = false; }; });
+        cancelAnimationFrame(idleRaf); if (F.turn === 1 && !F.say) say('Who dares disturb my calculations?!');
+        else if (!(performance.now() < F.sayUntil)) say(pick(['Dodge THIS!', 'Feel the power of long division!', 'Have some fractions!', 'I hope you revised!', 'Times tables, ATTACK!']), 2500);
         raf = requestAnimationFrame(loop);
       };
       const rage = () => 1 + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
       const spawn = now => {
-        const pat = F.turn % 4, r = rage(), cxp = bx, cyp = 110;
+        const pat = F.turn % 6, r = rage(), cxp = bx, cyp = 110;
         if (pat === 1) { // aimed volley
           for (let k = 0; k < 3; k++) { const a = Math.atan2(P.y - cyp, P.x - cxp) + (Math.random() - 0.5) * 0.9, v = (0.13 + Math.random() * 0.06) * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: SYM[k % SYM.length] }); }
           return 420 / r;
         }
         if (pat === 2) { // rain
-          for (let k = 0; k < 2; k++) shots.push({ x: ARENA.x0 + Math.random() * (ARENA.x1 - ARENA.x0), y: ARENA.y0 - 20, vx: 0, vy: (0.12 + Math.random() * 0.08) * r, s: SYM[Math.floor(Math.random() * SYM.length)], c: '#3aa0ff' });
+          for (let k = 0; k < 2; k++) shots.push({ x: ARENA.x0 + Math.random() * (ARENA.x1 - ARENA.x0), y: ARENA.y0 - 20, vx: 0, vy: (0.12 + Math.random() * 0.08) * r, s: SYM[Math.floor(Math.random() * SYM.length)], c: '#c084fc' });
           return 260 / r;
         }
         if (pat === 3) { // ring burst
-          const n = 10, off = Math.random() * Math.PI; for (let k = 0; k < n; k++) { const a = off + k * 2 * Math.PI / n, v = 0.11 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '×', c: '#ffc93c' }); }
+          const n = 10, off = Math.random() * Math.PI; for (let k = 0; k < n; k++) { const a = off + k * 2 * Math.PI / n, v = 0.11 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '×', c: '#ff5d73' }); }
           return 900 / r;
+        }
+        if (pat === 4 || pat === 5) { // blue bars: stay still · orange bars: keep moving
+          const fromLeft = Math.random() < 0.5, kind = pat === 4 ? (Math.random() < 0.7 ? 'blue' : 'orange') : (Math.random() < 0.5 ? 'blue' : 'orange');
+          shots.push({ bar: true, kind, x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: (ARENA.y0 + ARENA.y1) / 2, vx: (fromLeft ? 1 : -1) * 0.16 * r, vy: 0 });
+          if (pat === 5 && Math.random() < 0.5) { const a = Math.atan2(P.y - cyp, P.x - cxp), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: pick(SYM) }); }
+          return 1100 / r;
         }
         // walls with a gap
         const gap = ARENA.x0 + 40 + Math.random() * (ARENA.x1 - ARENA.x0 - 120);
@@ -431,14 +476,18 @@
       const loop = now => {
         if (F.over || F.phase !== 'dodge') return;
         const dt = Math.min(50, now - last); last = now;
-        const sp = 0.3 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp();
+        const px0 = P.x, py0 = P.y;
+        const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp();
+        const moving = Math.abs(P.x - px0) + Math.abs(P.y - py0) > 0.01;
         bx = 240 + Math.sin(now / 700) * 150;
         spawnT -= dt; if (spawnT <= 0) spawnT = spawn(now);
         shots.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; });
         shots = shots.filter(s => s.x > -30 && s.x < 510 && s.y < 330 && s.y > -40);
         // no invulnerability: every symbol that touches you deals damage, then disappears
         let hitNow = false;
-        shots = shots.filter(s => { if (s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1))); hitNow = true; return false; } return true; });
+        const dmgNow = () => Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1));
+        shots.forEach(s => { if (s.bar && !s.done && Math.abs(s.x - P.x) < 15) { const hurts = s.kind === 'blue' ? moving : !moving; if (hurts) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } } });
+        shots = shots.filter(s => { if (!s.bar && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - Math.round((5 + Math.floor(rage() * 2)) * (F.defend ? 0.5 : 1))); hitNow = true; return false; } return true; });
         if (hitNow) { hurtFlash = now + 150; ui(); if (F.hp <= 0) return end('lose'); }
         render(now);
         if (now >= dodgeEnd) { F.defend = false; F.msg = `Your turn! (round ${F.turn + 1})`; menu(); return; }
@@ -449,11 +498,12 @@
         const left = LIMIT - (Date.now() - F.t0); const el = $('#bTime', m); if (el) el.textContent = mmss(left);
         if (left <= 0 && !F.over) end('time');
       }, 500);
-      const stop = () => { F.over = true; cancelAnimationFrame(raf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
+      const stop = () => { F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
       const end = result => {
-        if (F.over) return; F.over = true; cancelAnimationFrame(raf); clearInterval(clockT); ui();
+        if (F.over) return; F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); ui(); render(performance.now());
         let title, body;
         if (result === 'win') { title = '🏆 You defeated the Calculator King!'; body = demo ? 'Preview — no tokens.' : '+1,000 🪙 victory bonus.'; if (!demo) addTokens(1000, 'Boss defeated'); }
+        else if (result === 'spare') { title = '🕊️ You spared the Calculator King!'; body = demo ? 'Preview — no tokens.' : 'He drops a peace offering: +500 🪙.'; if (!demo) addTokens(500, 'Spared the King'); }
         else if (result === 'time') { title = '⏳ You survived 15 minutes!'; body = 'The Calculator King gives up and leaves.'; }
         else {
           title = '💀 You ran out of HP…';
@@ -469,7 +519,7 @@
       };
       if (demo) $('#bEnd', m).onclick = () => { stop(); this.boss = null; if (QZ) QZ.paused--; };
       this.boss = () => { stop(); };
-      render(performance.now()); menu();
+      say('Who dares disturb my calculations?! I am the CALCULATOR KING!', 5000); menu();
     },
   };
 
@@ -833,6 +883,7 @@
   Store.load();
   if (!S.name) S.name = '';
   renderHud(); route('study');
+  if (Store.gift) { Store.save(); setTimeout(() => toast('🎁 Welcome gift: 10,000 starter coins!', 'good'), 400); }
   setInterval(() => { Store.fixDay(); }, 60000);
   Net.init(); Store.connect();
 })();
