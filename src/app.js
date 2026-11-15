@@ -339,7 +339,7 @@
       const SYM = ['÷', '×', '+', '−', '%', '=', '√', 'π'];
       const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
       const drawBoss = (x, t, hurt) => {
-        cx.save(); cx.translate(x, by + Math.sin(t / 300) * 4); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
+        cx.save(); cx.translate(x, by + Math.sin(t / 300) * 4); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0); cx.scale(0.8, 0.8);
         cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -70); cx.lineTo(-8, -56); cx.lineTo(0, -76); cx.lineTo(8, -56); cx.lineTo(22, -70); cx.lineTo(34, -52); cx.closePath(); cx.fill();
         cx.fillStyle = hurt ? '#ff5d73' : (VENGE ? ['#8a0f2e', '#8a0f2e', '#5c0a3f', '#2a0712'][F.vphase] : '#6c4cf5'); cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
         cx.fillStyle = '#9ff0c8'; cx.beginPath(); cx.roundRect(-46, -40, 92, 40, 8); cx.fill();
@@ -422,7 +422,7 @@
           const a = { R: 0, D: Math.PI / 2, L: Math.PI, U: -Math.PI / 2 }[F.shield];
           cx.strokeStyle = now < blocked ? '#ffffff' : '#3aa0ff'; cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.arc(P.x, P.y, 26, a - 0.6, a + 0.6); cx.stroke();
           cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, CW / 2, ARENA.y1 + 18);
-        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : F.grav ? '#7fe3ff' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, CW / 2, ARENA.y1 + 18); }
+        } else if (F.phase === 'dodge' || F.phase === 'trap') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : F.grav ? '#7fe3ff' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, CW / 2, ARENA.y1 + 18); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
@@ -437,9 +437,11 @@
         const sp = sparable();
         $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">${trusting() ? '🗡️ Attack (he trusts you…)' : '⚔️ Attack'}</button><button class="btn" id="bTalk" style="background:#3aa0ff;box-shadow:0 4px 0 #2079d1">💬 Talk</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn ghost" id="bDef">🛡️ Defend</button><button class="btn ${sp ? 'yellow' : 'ghost'}" id="bSpare">🕊️ Spare</button></div>
           <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Talk: calm him down. Spare works once he's calm or badly hurt.</div>`;
-        $('#bAtk', m).onclick = attack; $('#bItm', m).onclick = items; $('#bTalk', m).onclick = talk;
+        $('#bAtk', m).onclick = F.lastStand ? finalAttack : attack; $('#bItm', m).onclick = items; $('#bTalk', m).onclick = talk;
+        if (F.lastStand) { $('#bAtk', m).textContent = '⚔️ Finish him'; $('#bSpare', m).className = 'btn yellow'; }
         $('#bDef', m).onclick = () => { F.defend = true; F.msg = '🛡️ You brace yourself.'; say(pick(['Hiding behind a shield? How very... divisive.', 'Defend all you like. I have infinite digits!'])); dodge(); };
         $('#bSpare', m).onclick = () => {
+          if (VENGE && F.lastStand) return trapAttack();
           if (VENGE) { F.msg = '🚫 He cannot be spared.'; say(pick(['Mercy? You had your chance.', 'I trusted you ONCE.', 'No spare. No mercy. No remainder.'])); return dodge(); }
           if (sparable()) { say('...Fine. You may go. Study hard, little number cruncher.', 6000); return end('spare'); }
           F.msg = "🕊️ He isn't ready to be spared yet."; say(pick(['SPARE me? I am the KING! Ha!', 'Mercy does not compute!', 'Try harder, human.'])); dodge();
@@ -493,6 +495,10 @@
             let extra = ''; if (Math.random() < 0.25) { F.apples++; extra = ' The boss dropped an 🍎!'; }
             F.msg = `💥 Correct! You hit for <b>${dmg}</b>${fast ? ' (quick strike!)' : ''}.${extra}`;
             say(F.bhp <= BOSS_HP * 0.25 ? pick(['My battery... is running low...', 'Please... I just wanted to be good at sums...']) : pick(['OUCH! My buttons!', 'You carried the one?! Impossible!', 'Lucky guess, human!', 'ERR... ERR... recalculating!']));
+            if (F.bhp <= 0 && VENGE && !F.lastStand) {
+              F.bhp = 1; F.lastStand = true; F.msg = '⚠️ He clings on with <b>1 HP</b>. Attack to finish him… or Spare him?';
+              say('...Not... yet... I still have one digit left...', 7000); ui(); return menu();
+            }
             if (F.bhp <= 0) return end('win');
             if (VENGE && vPhase() !== F.vphase) {
               F.vphase = vPhase(); const ph = $('#vPh', m); if (ph) ph.textContent = `Phase ${F.vphase}/3`;
@@ -596,7 +602,7 @@
       const segDist = (px, py, x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); };
       const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }; let ARM_L = 440;
       // fit the canvas, box and helpers to the space on screen
-      const span = () => Math.max(1, (ARENA.x1 - ARENA.x0) / 420);
+      const span = () => Math.min(1.6, Math.max(1, (ARENA.x1 - ARENA.x0) / 600));
       const layout = () => {
         const stage = $('.bossstage', m); if (!stage) return;
         const W = Math.max(320, stage.clientWidth), H = Math.max(260, stage.clientHeight), dpr = window.devicePixelRatio || 1;
@@ -685,7 +691,7 @@
         else { const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp(); }
         const moving = Math.abs(P.x - px0) + Math.abs(P.y - py0) > 0.01;
         bx = CW / 2 + Math.sin(now / 700) * Math.min(220, CW / 3);
-        spawnT -= dt; if (spawnT <= 0) spawnT = F.moon ? moonSpawn(now) : F.grav ? gravSpawn(now) : spawn(now);
+        spawnT -= dt; if (spawnT <= 0) spawnT = F.final ? finalSpawn(now) : F.moon ? moonSpawn(now) : F.grav ? gravSpawn(now) : spawn(now);
         shots.forEach(s => {
           if (s.homing > 0) { s.homing -= dt; const a = Math.atan2(P.y - s.y, P.x - s.x), v = 0.16 * rage(); s.vx += (Math.cos(a) * v - s.vx) * 0.04; s.vy += (Math.sin(a) * v - s.vy) * 0.04; }
           s.x += s.vx * dt; s.y += s.vy * dt;
@@ -724,6 +730,8 @@
           ui(); if (F.hp <= 0) return end('lose');
         }
         render(now);
+        if (F.final) finalTick(now);
+        if (now >= dodgeEnd && F.final) return end('final');
         if (now >= dodgeEnd) { F.defend = false; F.msg = `Your turn! (round ${F.turn + 1})`; menu(); return; }
         raf = requestAnimationFrame(loop);
       };
@@ -733,16 +741,72 @@
         if (left <= 0 && !F.over) end('time');
       }, 500);
       const stop = () => { if (ro) ro.disconnect(); else window.removeEventListener('resize', layout); F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); document.removeEventListener('keydown', kd); document.removeEventListener('keyup', ku); m.remove(); };
+      // ---- the Vengeful King's last stand ----
+      const FINAL = [ // [seconds, mode, line]
+        [4, 'cannons', 'THIS IS IT. EVERY NUMBER I HAVE LEFT!'],
+        [4, 'bars', 'Blue! Orange! Blue! Keep up!'],
+        [4, 'grav', 'Down you go!'],
+        [4, 'lasers', 'Cross my lines!'],
+        [4, 'moon', 'Block THIS, if you can!'],
+        [5, 'all', 'EVERYTHING AT ONCE!!'],
+      ];
+      const finalMode = now => { let t = (now - F.finalStart) / 1000; for (const [d, mode, line] of FINAL) { if (t < d) return [mode, line]; t -= d; } return ['all', '']; };
+      const finalTick = now => {
+        const [mode, line] = finalMode(now);
+        if (mode === F.fMode) return;
+        F.fMode = mode; shots = shots.filter(s => !s.moonShot); say(line, 3500);
+        F.moon = mode === 'moon'; F.grav = mode === 'grav'; P.vy = 0; F.moonLast = 0;
+        if (F.moon) { P.x = AC.x; P.y = AC.y; } else if (F.grav) P.y = ARENA.y1 - 10;
+        $('#bPanel', m).innerHTML = `<div class="small" style="font-weight:800">☠️ FINAL ATTACK — survive!</div><div class="muted small">${F.moon ? '🌙 Turn your shield with WASD/arrows.' : F.grav ? '⬇ Gravity: jump with W/↑.' : 'Move with WASD or the arrow keys.'}</div>`;
+      };
+      const finalSpawn = now => {
+        const r = rage() * 1.15, mode = F.fMode;
+        if (mode === 'moon') return moonSpawn(now);
+        if (mode === 'grav') return gravSpawn(now);
+        if (mode === 'cannons') return cannons(now, r) * 0.7;
+        if (mode === 'bars') { const fromLeft = F.barsFromLeft; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.2 * r * span(), vy: 0 }); return 620 / r; }
+        if (mode === 'lasers') { const w = now + 700, l = now + 1250; shots.push({ laser: true, axis: 'h', pos: P.y, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }, { laser: true, axis: 'v', pos: P.x, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }); return 900 / r; }
+        // all: a rotating mix
+        const k = Math.floor(Math.random() * 3);
+        if (k === 0) cannons(now, r); else if (k === 1) { const a = Math.atan2(P.y - by, P.x - bx); for (let j = -1; j <= 1; j++) shots.push({ x: bx, y: by, vx: Math.cos(a + j * 0.25) * 0.2 * r, vy: Math.sin(a + j * 0.25) * 0.2 * r, s: pick(SYM), c: '#ff2d55' }); }
+        else { const h = Math.random() < 0.5; shots.push({ laser: true, axis: h ? 'h' : 'v', pos: h ? P.y : P.x, warnUntil: now + 650, liveUntil: now + 1150, x: AC.x, y: AC.y, vx: 0, vy: 0 }); }
+        return 520 / r;
+      };
+      const finalAttack = () => {
+        if (F.over) return;
+        F.final = true; F.spared = true; F.fMode = ''; F.phase = 'dodge'; F.defend = false; shots = []; P.x = AC.x; P.y = AC.y;
+        F.barsFromLeft = Math.random() < 0.5; F.finalStart = performance.now();
+        dodgeEnd = F.finalStart + FINAL.reduce((a, f) => a + f[0], 0) * 1000; spawnT = 600; last = performance.now();
+        F.msg = '☠️ He gathers every number he has left…'; ui(); cancelAnimationFrame(idleRaf);
+        raf = requestAnimationFrame(loop);
+      };
+      const trapAttack = () => {
+        if (F.over) return;
+        F.phase = 'trap'; cancelAnimationFrame(idleRaf); shots = [];
+        say('...Mercy? Heh. You should have known better.', 6000); F.msg = '🕊️ You lower your guard and offer mercy…'; ui();
+        $('#bPanel', m).innerHTML = '<div class="small" style="font-weight:800">💀 There is nowhere to run.</div>';
+        const t0 = performance.now(), hp0 = F.hp;
+        const trap = now => {
+          if (F.over) return;
+          const k = Math.min(1, (now - t0) / 2600);
+          if (Math.random() < 0.9) for (let j = 0; j < 4; j++) shots.push({ x: ARENA.x0 + Math.random() * (ARENA.x1 - ARENA.x0), y: ARENA.y0 + Math.random() * (ARENA.y1 - ARENA.y0), vx: 0, vy: 0, s: pick(SYM), c: '#ff2d55' });
+          shots = shots.slice(-260); F.hp = Math.max(0, Math.round(hp0 * (1 - k))); hurtFlash = now + 100; ui(); render(now);
+          if (k >= 1) return end('trap');
+          raf = requestAnimationFrame(trap);
+        };
+        setTimeout(() => { raf = requestAnimationFrame(trap); }, 1200);
+      };
       const end = result => {
         if (F.over) return; F.over = true; cancelAnimationFrame(raf); cancelAnimationFrame(idleRaf); clearInterval(clockT); ui(); render(performance.now());
         let title, body;
-        if (result === 'win' && VENGE) { S.kingBetrayed = false; Store.save(); say('...Where am I? Why is my crown on backwards?', 8000); render(performance.now()); title = '🏆 You defeated the Vengeful King!'; body = (demo ? '' : '+3,000 🪙. ') + 'His anger fades. He is back to being the normal Calculator King, and can be spared again.'; if (!demo) addTokens(3000, 'Vengeful King defeated'); }
+        if (result === 'final') { S.kingBetrayed = false; Store.save(); shots = []; say('...You... actually... did it... ...Where am I? Why is my crown on backwards?', 9000); render(performance.now()); title = '🏆 You survived his final attack!'; body = (demo ? '' : '+5,000 🪙. ') + 'The Vengeful King collapses. When he wakes up, he is the normal Calculator King again.'; if (!demo) addTokens(5000, 'Survived the final attack'); }
+        else if (result === 'win' && VENGE) { S.kingBetrayed = false; Store.save(); say('...Where am I? Why is my crown on backwards?', 8000); render(performance.now()); title = '🏆 You defeated the Vengeful King!'; body = (demo ? '' : '+3,000 🪙. ') + 'His anger fades. He is back to being the normal Calculator King, and can be spared again.'; if (!demo) addTokens(3000, 'Vengeful King defeated'); }
         else if (result === 'win') { title = '🏆 You defeated the Calculator King!'; body = demo ? 'Preview — no tokens.' : '+1,000 🪙 victory bonus.'; if (!demo) addTokens(1000, 'Boss defeated'); }
         else if (result === 'betray') { title = '🗡️ You struck him down while he trusted you.'; body = (demo ? '' : '+1,000 🪙. ') + 'He will remember this. Next time there will be no mercy.'; if (!demo) addTokens(1000, 'Boss defeated'); }
         else if (result === 'spare') { title = '🕊️ You spared the Calculator King!'; body = demo ? 'Preview — no tokens.' : 'He drops a peace offering: +500 🪙.'; if (!demo) addTokens(500, 'Spared the King'); }
         else if (result === 'time') { title = '⏳ You survived 15 minutes!'; body = 'The Calculator King gives up and leaves.'; }
         else {
-          title = '💀 You ran out of HP…';
+          title = result === 'trap' ? '💀 He used your mercy against you.' : '💀 You ran out of HP…';
           if (demo) body = `Preview — in a real fight you'd lose ${fmt(10000)} 🪙 to the sender.`;
           else {
             const amt = Math.min(10000, S.tokens); S.tokens -= amt; Store.save(); renderHud();
