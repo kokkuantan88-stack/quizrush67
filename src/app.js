@@ -316,7 +316,7 @@
       const m = modal(`
         <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">${VENGE ? '😡 The Vengeful Calculator King <span id="vPh" class="tag" style="vertical-align:middle">Phase 1/3</span>' : '👾 The Calculator King'}</h2><span class="pill" style="background:#efeafe;color:#6c4cf5">⏳ <b id="bTime">15:00</b></span></div>
         <div class="small" style="font-weight:800">Boss HP <span id="bHpT"></span></div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="bHp" style="background:linear-gradient(90deg,#ff5d73,#ff9a3c)"></i></div>
-        <div class="bossstage"><canvas id="bc" width="480" height="500" style="background:#140d33"></canvas></div>
+        <div class="bossstage"><canvas id="bc" width="640" height="420" style="background:#140d33"></canvas></div>
         <div class="small" style="font-weight:800;margin-top:8px">Your HP <span id="pHpT"></span>${F.defend ? '' : ''}</div><div class="bar" style="height:12px;margin:2px 0 8px"><i id="pHp" style="background:linear-gradient(90deg,#20bf8a,#3aa0ff)"></i></div>
         <div class="small" style="font-weight:800">Mercy <span id="mHpT"></span></div><div class="bar" style="height:8px;margin:2px 0 8px"><i id="mHp" style="background:linear-gradient(90deg,#ffc93c,#ffe08a)"></i></div>
         <div id="bMsg" class="small" style="min-height:20px;font-weight:700;margin-bottom:8px"></div>
@@ -325,8 +325,9 @@
       m.classList.add('bossfull'); // full-screen fight: arena shrinks to fit so the buttons always stay on screen
       const cv = $('#bc', m), cx = cv.getContext('2d');
       const P = { x: 240, y: 240 }; let shots = [], inv = 0, raf = null, dodgeEnd = 0, spawnT = 0, keys = {}, last = 0, clockT = null;
-      const CH_H = 500, ARENA = { x0: 70, x1: 410, y0: 130, y1: 470 }; // square 340×340 dodge box; labels sit below it
-      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * 480 / r.width, y: (e.clientY - r.top) * CH_H / r.height }; };
+      const CW = 640, CH_H = 420, ARENA = { x0: 236, x1: 616, y0: 20, y1: 400 }; // King on the left, 380×380 dodge box on the right
+      const AC = { x: (ARENA.x0 + ARENA.x1) / 2, y: (ARENA.y0 + ARENA.y1) / 2 };
+      const toCanvas = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * CW / r.width, y: (e.clientY - r.top) * CH_H / r.height }; };
       const clamp = () => { P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x)); P.y = Math.max(ARENA.y0 + 8, Math.min(ARENA.y1 - 8, P.y)); };
       let idleRaf = null;
       const say = (t, ms = 3800) => { F.say = t; F.sayUntil = performance.now() + ms; };
@@ -338,7 +339,7 @@
       const SYM = ['÷', '×', '+', '−', '%', '=', '√', 'π'];
       const star = (x, y, r) => { cx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; cx.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); } cx.closePath(); cx.fill(); };
       const drawBoss = (x, t, hurt) => {
-        cx.save(); cx.translate(x, 64 + Math.sin(t / 300) * 4); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
+        cx.save(); cx.translate(x, by + Math.sin(t / 300) * 4); if (hurt) cx.translate((Math.random() - 0.5) * 8, 0);
         cx.fillStyle = '#ffc93c'; cx.beginPath(); cx.moveTo(-34, -52); cx.lineTo(-22, -70); cx.lineTo(-8, -56); cx.lineTo(0, -76); cx.lineTo(8, -56); cx.lineTo(22, -70); cx.lineTo(34, -52); cx.closePath(); cx.fill();
         cx.fillStyle = hurt ? '#ff5d73' : (VENGE ? ['#8a0f2e', '#8a0f2e', '#5c0a3f', '#2a0712'][F.vphase] : '#6c4cf5'); cx.beginPath(); cx.roundRect(-60, -52, 120, 104, 16); cx.fill();
         cx.fillStyle = '#9ff0c8'; cx.beginPath(); cx.roundRect(-46, -40, 92, 40, 8); cx.fill();
@@ -347,17 +348,41 @@
         for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) { cx.fillStyle = c === 3 ? '#ff5d73' : '#efe9ff'; cx.beginPath(); cx.roundRect(-44 + c * 23, 10 + r * 19, 18, 14, 4); cx.fill(); }
         cx.restore();
       };
-      let hurtUntil = 0, hurtFlash = 0, bx = 240;
+      let hurtUntil = 0, hurtFlash = 0; const bx = 118; let by = 170; // King's position
       const render = now => {
-        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, 480, CH_H);
+        cx.fillStyle = '#140d33'; cx.fillRect(0, 0, CW, CH_H);
         drawBoss(bx, now, now < hurtUntil);
         cx.strokeStyle = F.phase === 'dodge' ? '#ffffff' : 'rgba(255,255,255,.25)'; cx.lineWidth = 2; cx.strokeRect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0);
         cx.font = 'bold 22px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
         shots.forEach(s => {
+          if (s.spike) { // a stack of ▲ rising from the floor
+            cx.save(); cx.beginPath(); cx.rect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0); cx.clip();
+            cx.fillStyle = s.done ? 'rgba(255,154,60,.4)' : '#ff9a3c'; cx.beginPath(); cx.moveTo(s.x - 9, ARENA.y1); cx.lineTo(s.x, ARENA.y1 - s.h); cx.lineTo(s.x + 9, ARENA.y1); cx.fill();
+            cx.restore(); return;
+          }
+          if (s.gate) { // a ruler from the top and one from the bottom
+            cx.save(); cx.beginPath(); cx.rect(ARENA.x0, ARENA.y0, ARENA.x1 - ARENA.x0, ARENA.y1 - ARENA.y0); cx.clip();
+            cx.fillStyle = s.done ? 'rgba(255,201,60,.4)' : '#ffc93c';
+            cx.fillRect(s.x - 10, ARENA.y0, 20, s.gapY - ARENA.y0); cx.fillRect(s.x - 10, s.gapY + s.gapH, 20, ARENA.y1 - s.gapY - s.gapH);
+            cx.fillStyle = '#7a5300'; for (let y = ARENA.y0 + 6; y < ARENA.y1; y += 12) if (y < s.gapY || y > s.gapY + s.gapH) cx.fillRect(s.x - 10, y, y % 36 < 12 ? 9 : 5, 2);
+            cx.restore(); return;
+          }
+          if (s.cannon) {
+            const nowp = performance.now(), live = nowp >= s.warnUntil, horiz = s.side === 'L' || s.side === 'R';
+            const gx = s.side === 'L' ? ARENA.x0 - 4 : s.side === 'R' ? ARENA.x1 + 4 : s.pos, gy = s.side === 'T' ? ARENA.y0 - 4 : s.side === 'B' ? ARENA.y1 + 4 : s.pos;
+            cx.save();
+            if (live) { cx.fillStyle = s.done ? 'rgba(160,240,255,.35)' : 'rgba(160,240,255,.9)'; cx.shadowColor = '#7fe3ff'; cx.shadowBlur = 18; if (horiz) cx.fillRect(ARENA.x0, s.pos - 22, ARENA.x1 - ARENA.x0, 44); else cx.fillRect(s.pos - 22, ARENA.y0, 44, ARENA.y1 - ARENA.y0); }
+            else { cx.strokeStyle = 'rgba(127,227,255,.55)'; cx.setLineDash([6, 6]); cx.lineWidth = 2; cx.beginPath(); if (horiz) { cx.moveTo(ARENA.x0, s.pos - 22); cx.lineTo(ARENA.x1, s.pos - 22); cx.moveTo(ARENA.x0, s.pos + 22); cx.lineTo(ARENA.x1, s.pos + 22); } else { cx.moveTo(s.pos - 22, ARENA.y0); cx.lineTo(s.pos - 22, ARENA.y1); cx.moveTo(s.pos + 22, ARENA.y0); cx.lineTo(s.pos + 22, ARENA.y1); } cx.stroke(); cx.setLineDash([]); }
+            cx.shadowBlur = 0; cx.translate(gx, gy); cx.rotate({ L: 0, R: Math.PI, T: Math.PI / 2, B: -Math.PI / 2 }[s.side]);
+            cx.fillStyle = '#6c4cf5'; cx.beginPath(); cx.roundRect(-30, -20, 30, 40, 6); cx.fill();
+            cx.fillStyle = live ? '#ffffff' : '#9ff0c8'; cx.beginPath(); cx.roundRect(-25, -15, 20, 12, 3); cx.fill();
+            cx.fillStyle = '#efe9ff'; for (let k = 0; k < 2; k++) for (let j = 0; j < 2; j++) cx.fillRect(-24 + j * 10, 2 + k * 8, 7, 5);
+            cx.restore(); return;
+          }
           if (s.stomp) {
             const live = performance.now() >= s.warnUntil;
-            if (!live) { cx.strokeStyle = 'rgba(255,93,115,.8)'; cx.setLineDash([5, 4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(s.x, s.y, 30, 0, 7); cx.stroke(); cx.setLineDash([]); }
-            else { cx.fillStyle = s.done ? 'rgba(255,93,115,.45)' : '#ff5d73'; cx.beginPath(); cx.arc(s.x, s.y, 30, 0, 7); cx.fill(); cx.fillStyle = '#fff'; cx.fillText('8', s.x, s.y); }
+            if (!live) { cx.strokeStyle = 'rgba(255,93,115,.8)'; cx.setLineDash([5, 4]); cx.lineWidth = 2; cx.beginPath(); cx.arc(s.x, s.y, s.rad || 30, 0, 7); cx.stroke(); cx.setLineDash([]); }
+            else { cx.fillStyle = s.done ? 'rgba(255,93,115,.45)' : '#ff5d73'; cx.beginPath(); cx.arc(s.x, s.y, s.rad || 30, 0, 7); cx.fill(); cx.fillStyle = '#fff'; cx.fillText('8', s.x, s.y); }
             return;
           }
           if (s.arm) {
@@ -376,12 +401,12 @@
           if (s.bar) { if (s.x < ARENA.x0 || s.x > ARENA.x1) return; cx.fillStyle = s.kind === 'blue' ? '#3aa0ff' : '#ff9a3c'; cx.globalAlpha = s.done ? 0.35 : 1; cx.fillRect(s.x - 7, ARENA.y0 + 2, 14, ARENA.y1 - ARENA.y0 - 4); cx.globalAlpha = 1; return; }
           cx.fillStyle = s.c || '#ff5d73'; if (s.big) { cx.font = 'bold 34px Fredoka, sans-serif'; cx.fillText(s.s, s.x, s.y); cx.font = 'bold 22px Fredoka, sans-serif'; } else cx.fillText(s.s, s.x, s.y);
         });
-        if (F.phase === 'dodge' && (F.turn % 10 === 4 || F.turn % 10 === 5)) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', 105, ARENA.y1 + 20); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', 385, ARENA.y1 + 20); cx.font = 'bold 22px Fredoka, sans-serif'; }
+        if (F.phase === 'dodge' && (!F.grav && !F.moon && (VENGE ? false : (F.turn % 12 === 4 || F.turn % 12 === 5)))) { cx.font = 'bold 12px Nunito, sans-serif'; cx.fillStyle = '#3aa0ff'; cx.fillText('BLUE: stay still', bx, CH_H - 58); cx.fillStyle = '#ff9a3c'; cx.fillText('ORANGE: keep moving', bx, CH_H - 40); cx.font = 'bold 22px Fredoka, sans-serif'; }
         if (now < F.sayUntil && F.say) {
           cx.font = 'bold 13px Nunito, sans-serif'; const words = F.say.split(' '), lines = ['']; words.forEach(w => { if ((lines.at(-1) + ' ' + w).length > 28) lines.push(w); else lines[lines.length - 1] = (lines.at(-1) + ' ' + w).trim(); });
-          const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = bx > 240 ? bx - 75 - bw : bx + 75, sy = 22;
+          const bw = Math.max(...lines.map(l => cx.measureText(l).width)) + 22, bh = lines.length * 17 + 14, sx = Math.max(6, bx - bw / 2), sy = by + 66;
           cx.fillStyle = '#fff'; cx.beginPath(); cx.roundRect(sx, sy, bw, bh, 10); cx.fill();
-          cx.beginPath(); const tx = bx > 240 ? sx + bw : sx; cx.moveTo(tx, sy + 18); cx.lineTo(bx > 240 ? tx + 12 : tx - 12, sy + 26); cx.lineTo(tx, sy + 30); cx.fill();
+          cx.beginPath(); cx.moveTo(bx - 8, sy); cx.lineTo(bx, sy - 10); cx.lineTo(bx + 8, sy); cx.fill();
           cx.fillStyle = '#231a4a'; cx.textAlign = 'left'; lines.forEach((l, i) => cx.fillText(l, sx + 11, sy + 15 + i * 17)); cx.textAlign = 'center';
         }
         if (F.phase === 'dodge' && F.moon) {
@@ -389,8 +414,8 @@
           cx.fillStyle = '#140d33'; cx.beginPath(); cx.arc(P.x + 6, P.y - 4, 11, 0, 7); cx.fill();
           const a = { R: 0, D: Math.PI / 2, L: Math.PI, U: -Math.PI / 2 }[F.shield];
           cx.strokeStyle = now < blocked ? '#ffffff' : '#3aa0ff'; cx.lineWidth = 6; cx.lineCap = 'round'; cx.beginPath(); cx.arc(P.x, P.y, 26, a - 0.6, a + 0.6); cx.stroke();
-          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y1 + 20);
-        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, 240, ARENA.y1 + 20); }
+          cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`🌙 Block! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, bx, CH_H - 16);
+        } else if (F.phase === 'dodge') { cx.fillStyle = now < hurtFlash ? '#ff5d73' : F.grav ? '#7fe3ff' : (F.defend ? '#3aa0ff' : '#ffc93c'); star(P.x, P.y, 11); cx.fillStyle = '#fff'; cx.font = 'bold 13px Nunito, sans-serif'; cx.fillText(`Dodge! ${Math.max(0, Math.ceil((dodgeEnd - now) / 1000))}s`, bx, CH_H - 16); }
       };
       const ui = () => {
         $('#bHp', m).style.width = (100 * F.bhp / BOSS_HP) + '%'; $('#bHpT', m).textContent = `${Math.max(0, F.bhp)} / ${BOSS_HP}`;
@@ -401,7 +426,7 @@
       // ---- player turn ----
       const menu = () => {
         if (F.over) return; F.phase = 'menu'; shots = []; ui();
-        cancelAnimationFrame(idleRaf); const idle = now => { if (F.over || F.phase === 'dodge') return; bx = 240 + Math.sin(now / 1400) * 120; render(now); idleRaf = requestAnimationFrame(idle); }; idleRaf = requestAnimationFrame(idle);
+        cancelAnimationFrame(idleRaf); const idle = now => { if (F.over || F.phase === 'dodge') return; by = 165 + Math.sin(now / 1400) * 35; render(now); idleRaf = requestAnimationFrame(idle); }; idleRaf = requestAnimationFrame(idle);
         const sp = sparable();
         $('#bPanel', m).innerHTML = `<div class="row"><button class="btn red" id="bAtk">${trusting() ? '🗡️ Attack (he trusts you…)' : '⚔️ Attack'}</button><button class="btn" id="bTalk" style="background:#3aa0ff;box-shadow:0 4px 0 #2079d1">💬 Talk</button><button class="btn green" id="bItm">🎒 Items</button><button class="btn ghost" id="bDef">🛡️ Defend</button><button class="btn ${sp ? 'yellow' : 'ghost'}" id="bSpare">🕊️ Spare</button></div>
           <div class="muted small" style="margin-top:6px">Attack: answer a maths question to deal damage. Talk: calm him down. Spare works once he's calm or badly hurt.</div>`;
@@ -499,10 +524,13 @@
       // ---- boss turn ----
       const dodge = () => {
         if (F.over) return;
-        F.phase = 'dodge'; F.turn++; shots = []; P.x = 240; P.y = (ARENA.y0 + ARENA.y1) / 2; inv = 0;
+        F.phase = 'dodge'; F.turn++; shots = []; P.x = AC.x; P.y = AC.y; inv = 0;
         F.moon = F.turn > 1 && Math.random() < 0.25; F.shield = 'U'; F.moonLast = 0; F.barsFromLeft = Math.random() < 0.5; // bar walls come from one side per round
+        // gravity rounds: you fall to the floor and jump over number spikes
+        F.grav = !F.moon && (VENGE ? (F.vphase === 2 ? F.turn % 6 === 3 : F.vphase === 3 && Math.random() < 0.2) : F.turn % 12 === 10);
+        P.vy = 0; if (F.grav) P.y = ARENA.y1 - 10;
         dodgeEnd = performance.now() + DODGE_MS; spawnT = 400; last = performance.now();
-        $('#bPanel', m).innerHTML = `<div class="muted small">${F.moon ? '🌙 <b>Moon mode!</b> You can\'t move. Turn your shield with WASD or the arrow keys to block numbers from each side.' : 'Move the ⭐ with WASD or the arrow keys. Every hit costs HP.'}</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
+        $('#bPanel', m).innerHTML = `<div class="muted small">${F.moon ? '🌙 <b>Moon mode!</b> You can\'t move. Turn your shield with WASD or the arrow keys to block numbers from each side.' : F.grav ? '⬇ <b>Gravity!</b> You fall to the floor. Jump with W or ↑, move with A/D or ←/→.' : 'Move the ⭐ with WASD or the arrow keys. Every hit costs HP.'}</div>${matchMedia('(pointer:coarse)').matches ? '<div class="dpad" id="bPad" style="margin-top:8px"><span></span><button data-k="U">↑</button><span></span><button data-k="L">←</button><button data-k="D">↓</button><button data-k="R">→</button></div>' : ''}`; ui();
         $$('#bPad button', m).forEach(b => { const k = b.dataset.k; b.onpointerdown = e => { e.preventDefault(); keys[k] = true; }; b.onpointerup = b.onpointerleave = b.onpointercancel = () => { keys[k] = false; }; });
         cancelAnimationFrame(idleRaf); if (F.moon) say(pick(['To the MOON with you!', 'Let\'s see you block THIS!', 'No running this time!']), 2500); else if (F.turn === 1 && !F.say) say('Who dares disturb my calculations?!');
         else if (!(performance.now() < F.sayUntil)) say(pick(VENGE ? ['This is for last time!', 'Divide and CONQUER!', 'Feel my betrayal, squared!', 'No remainder. No mercy.'] : ['Dodge THIS!', 'Feel the power of long division!', 'Have some fractions!', 'I hope you revised!', 'Times tables, ATTACK!']), 2500);
@@ -513,20 +541,44 @@
       const moonSpawn = now => {
         // fair by design: one number at a time, each reaching the shield at a scheduled moment,
         // with arrivals always spaced far enough apart to turn the shield
-        const r = rage(), C = { x: 240, y: (ARENA.y0 + ARENA.y1) / 2 };
+        const r = rage(), C = AC;
         const travel = 1500 / Math.sqrt(r), gap = Math.max(VENGE ? 380 : 450, (VENGE ? 620 : 760) / Math.sqrt(r));
         const arrive = Math.max(now + travel, (F.moonLast || 0) + gap); F.moonLast = arrive;
         const d = pick(['U', 'D', 'L', 'R']);
-        const st = { U: [C.x, C.y - 190], D: [C.x, C.y + 190], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], len = Math.hypot(C.x - st[0], C.y - st[1]);
+        const st = { U: [C.x, C.y - 205], D: [C.x, C.y + 205], L: [C.x - 205, C.y], R: [C.x + 205, C.y] }[d], len = Math.hypot(C.x - st[0], C.y - st[1]);
         const v = (len - 30) / (arrive - now); // reaches the shield ring (radius 30) exactly at its arrival time
         shots.push({ moonShot: true, dir: d, x: st[0], y: st[1], vx: (C.x - st[0]) / len * v, vy: (C.y - st[1]) / len * v, s: pick(SYM), c: '#ffe08a' });
         return gap;
+      };
+      // number spikes slide along the floor (gravity rounds); the Vengeful King mixes in cannons
+      const gravSpawn = now => {
+        const r = rage(), fromLeft = F.barsFromLeft;
+        if (VENGE && F.vphase === 3 && Math.random() < 0.3) return cannons(now, r);
+        const h = 26 + Math.random() * (VENGE ? 52 : 40);
+        shots.push({ spike: true, h, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: ARENA.y1, vx: (fromLeft ? 1 : -1) * (0.15 + Math.random() * 0.04) * r, vy: 0 });
+        return Math.max(520, 1050 / r);
+      };
+      // ruler gates: rulers from the top and bottom with a gap to slip through
+      const gates = (now, r) => {
+        const fromLeft = F.barsFromLeft, gapH = VENGE ? 92 : 110, gapY = ARENA.y0 + 30 + Math.random() * (ARENA.y1 - ARENA.y0 - 60 - gapH);
+        shots.push({ gate: true, gapY, gapH, x: fromLeft ? ARENA.x0 - 12 : ARENA.x1 + 12, y: AC.y, vx: (fromLeft ? 1 : -1) * 0.14 * r, vy: 0 });
+        return Math.max(700, 1250 / r);
+      };
+      // calculator cannons charge at the edge of the box, then fire a thick beam across it
+      const cannons = (now, r) => {
+        const n = F.vphase === 3 ? 2 : 1;
+        for (let k = 0; k < n; k++) {
+          const side = pick(['L', 'R', 'T', 'B']), horiz = side === 'L' || side === 'R';
+          const pos = k === 0 ? (horiz ? P.y : P.x) : (horiz ? ARENA.y0 + 40 + Math.random() * (ARENA.y1 - ARENA.y0 - 80) : ARENA.x0 + 40 + Math.random() * (ARENA.x1 - ARENA.x0 - 80));
+          shots.push({ cannon: true, side, pos, warnUntil: now + 950, liveUntil: now + 1650, x: AC.x, y: AC.y, vx: 0, vy: 0 });
+        }
+        return Math.max(650, 1300 / r);
       };
       const rage = () => 1 + (VENGE ? 0.45 : 0) + (1 - F.bhp / BOSS_HP) * 0.8 + Math.min(F.turn, 20) * 0.03;
 
       // ---- extra attacks shared by both forms ----
       const atk = {
-        bouncers: (now, r) => { for (let k = 0; k < 2; k++) { const a = Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 0.15 * r; shots.push({ bounce: true, until: now + 5200, x: bx, y: 110, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '0', c: '#20bf8a' }); } return 1500 / r; },
+        bouncers: (now, r) => { for (let k = 0; k < 2; k++) { const a = Math.PI / 2 + (Math.random() - 0.5) * 1.6, v = 0.15 * r; shots.push({ bounce: true, until: now + 5200, x: ARENA.x0 + 30 + Math.random() * (ARENA.x1 - ARENA.x0 - 60), y: ARENA.y0 + 14, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '0', c: '#20bf8a' }); } return 1500 / r; },
         waves: (now, r) => { const left = Math.random() < 0.5, baseY = ARENA.y0 + 18 + Math.random() * (ARENA.y1 - ARENA.y0 - 36); for (let k = 0; k < 5; k++) shots.push({ wave: true, t0: now - k * 120, baseY, amp: 22 + Math.random() * 14, x: left ? ARENA.x0 - 20 - k * 22 : ARENA.x1 + 20 + k * 22, y: baseY, vx: (left ? 1 : -1) * 0.14 * r, vy: 0, s: pick(['1', '2', '3', '4', '5']), c: '#c084fc' }); return 900 / r; },
         splitters: (now, r) => { shots.push({ split: ARENA.y0 + 30 + Math.random() * (ARENA.y1 - ARENA.y0 - 60), x: ARENA.x0 + 30 + Math.random() * (ARENA.x1 - ARENA.x0 - 60), y: ARENA.y0 - 20, vx: 0, vy: 0.12 * r, s: '÷', c: '#ff9a3c', big: true }); return 1000 / r; },
         stomps: (now, r) => { shots.push({ stomp: true, x: P.x, y: P.y, warnUntil: now + Math.max(500, 900 / r), liveUntil: now + Math.max(500, 900 / r) + 350, vx: 0, vy: 0 }); return 850 / r; },
@@ -535,20 +587,38 @@
       // the arm is a wiper fixed at the top-middle of the arena, swinging side to side
       const armAngle = (s, now) => Math.PI / 2 + Math.PI * 0.44 * Math.sin(s.ph0 + s.speed * Math.max(0, now - s.warnUntil));
       const segDist = (px, py, x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy)); };
-      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 400;
+      const ARM_C = { x: (ARENA.x0 + ARENA.x1) / 2, y: ARENA.y0 }, ARM_L = 440;
       const vSpawn = now => {
-        const ph = F.vphase, r = rage(), cxp = bx, cyp = 110;
-        const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.cos(a) * v, vy: Math.abs(Math.sin(a)) * v + 0.03, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
+        const ph = F.vphase, r = rage(), cxp = bx, cyp = by;
+        const spiral = () => { for (let arm = 0; arm < (ph === 3 ? 3 : 2); arm++) { const a = now / 260 + arm * 2 * Math.PI / (ph === 3 ? 3 : 2), v = 0.12 * r; shots.push({ x: cxp, y: cyp, vx: Math.abs(Math.cos(a)) * v + 0.03, vy: Math.sin(a) * v, s: '∞', c: '#ff2d55' }); } return 110 / Math.sqrt(r); };
         const bars = () => { const fromLeft = F.barsFromLeft; shots.push({ bar: true, kind: Math.random() < 0.5 ? 'blue' : 'orange', x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: 0, vx: (fromLeft ? 1 : -1) * 0.22 * r, vy: 0 }); return 750 / r; };
         const laser = () => { const h = Math.random() < 0.5; shots.push({ laser: true, axis: h ? 'h' : 'v', pos: h ? (Math.random() < 0.6 ? P.y : ARENA.y0 + 15 + Math.random() * (ARENA.y1 - ARENA.y0 - 30)) : (Math.random() < 0.6 ? P.x : ARENA.x0 + 15 + Math.random() * (ARENA.x1 - ARENA.x0 - 30)), warnUntil: now + 750, liveUntil: now + 1350, x: 240, y: 200, vx: 0, vy: 0 }); return 700 / r; };
-        const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0, vy: 0.1, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
-        if (ph === 1) return [spiral, bars, () => atk.waves(now, r), () => atk.bouncers(now, r)][F.turn % 4]();
-        if (ph === 2) return [laser, homing, () => atk.stomps(now, r), () => (Math.random() < 0.5 ? atk.arm(now, r) : laser())][F.turn % 4]();
-        return pick([spiral, bars, laser, homing, () => atk.stomps(now, r), () => atk.arm(now, r), () => atk.splitters(now, r), () => atk.waves(now, r)])();
+        const homing = () => { shots.push({ homing: 1600, x: cxp, y: cyp, vx: 0.1, vy: 0, s: pick(['7', '3', '9', '0']), c: '#ffc93c' }); return 520 / r; };
+        // vengeful-only attacks
+        const crossLaser = () => { const w = now + 850, l = now + 1450; shots.push({ laser: true, axis: 'h', pos: P.y, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }, { laser: true, axis: 'v', pos: P.x, warnUntil: w, liveUntil: l, x: AC.x, y: AC.y, vx: 0, vy: 0 }); return 1250 / r; };
+        const stompGrid = () => { // 3×3 stomps with one safe square
+          const cell = (ARENA.x1 - ARENA.x0) / 3, safe = Math.floor(Math.random() * 9), w = now + Math.max(800, 1300 / r);
+          for (let k = 0; k < 9; k++) if (k !== safe) shots.push({ stomp: true, rad: cell / 2 - 6, x: ARENA.x0 + cell * (k % 3 + 0.5), y: ARENA.y0 + cell * (Math.floor(k / 3) + 0.5), warnUntil: w, liveUntil: w + 400, vx: 0, vy: 0 });
+          return 2000 / r;
+        };
+        const collapseRing = () => { // a ring closes in on you; escape through the gap
+          const n = 16, gap = Math.floor(Math.random() * n), v = 0.085 * r;
+          for (let k = 0; k < n; k++) { if (k === gap || k === (gap + 1) % n) continue; const a = k * 2 * Math.PI / n; shots.push({ x: P.x + Math.cos(a) * 175, y: P.y + Math.sin(a) * 175, vx: -Math.cos(a) * v, vy: -Math.sin(a) * v, s: pick(SYM), c: '#ff2d55' }); }
+          return 2100 / r;
+        };
+        const sideVolley = () => { // a column of digits from one side, with one gap
+          const fromLeft = F.barsFromLeft, n = 7, gap = Math.floor(Math.random() * (n - 1)), step = (ARENA.y1 - ARENA.y0) / n;
+          for (let k = 0; k < n; k++) { if (k === gap || k === gap + 1) continue; shots.push({ x: fromLeft ? ARENA.x0 - 10 : ARENA.x1 + 10, y: ARENA.y0 + step * (k + 0.5), vx: (fromLeft ? 1 : -1) * 0.15 * r, vy: 0, s: pick(['6', '6', '6', '9']), c: '#ff9a3c' }); }
+          return 1100 / r;
+        };
+        if (ph === 1) return [spiral, bars, () => atk.waves(now, r), () => atk.bouncers(now, r), sideVolley, () => gates(now, r)][F.turn % 6]();
+        if (ph === 2) return [laser, homing, () => cannons(now, r), () => atk.stomps(now, r), () => (Math.random() < 0.5 ? atk.arm(now, r) : laser()), crossLaser, stompGrid][F.turn % 7]();
+        return pick([spiral, bars, laser, homing, crossLaser, stompGrid, collapseRing, sideVolley, () => cannons(now, r), () => cannons(now, r), () => gates(now, r), () => atk.stomps(now, r), () => atk.arm(now, r), () => atk.splitters(now, r), () => atk.waves(now, r)])();
       };
       const spawn = now => {
         if (VENGE) return vSpawn(now);
-        const pat = F.turn % 10, r = rage(), cxp = bx, cyp = 110;
+        const pat = F.turn % 12, r = rage(), cxp = bx, cyp = by;
+        if (pat === 11) return gates(now, r);
         if (pat === 6) return atk.bouncers(now, r);
         if (pat === 7) return atk.waves(now, r);
         if (pat === 8) return atk.splitters(now, r);
@@ -581,10 +651,18 @@
         const dt = Math.min(50, now - last); last = now;
         const px0 = P.x, py0 = P.y;
         if (F.moon) { for (const k of ['U', 'D', 'L', 'R']) if (keys[k]) F.shield = k; }
+        else if (F.grav) {
+          const sp = 0.17 * dt, floor = ARENA.y1 - 10, onGround = P.y >= floor - 0.5;
+          if (keys.L) P.x -= sp; if (keys.R) P.x += sp;
+          if (keys.U && onGround) P.vy = -0.56;
+          P.vy += 0.0013 * dt; P.y += P.vy * dt;
+          if (P.y >= floor) { P.y = floor; P.vy = 0; } if (P.y < ARENA.y0 + 10) { P.y = ARENA.y0 + 10; P.vy = Math.max(0, P.vy); }
+          P.x = Math.max(ARENA.x0 + 8, Math.min(ARENA.x1 - 8, P.x));
+        }
         else { const sp = 0.17 * dt; if (keys.L) P.x -= sp; if (keys.R) P.x += sp; if (keys.U) P.y -= sp; if (keys.D) P.y += sp; clamp(); }
         const moving = Math.abs(P.x - px0) + Math.abs(P.y - py0) > 0.01;
-        bx = 240 + Math.sin(now / 700) * 150;
-        spawnT -= dt; if (spawnT <= 0) spawnT = F.moon ? moonSpawn(now) : spawn(now);
+        by = 165 + Math.sin(now / 700) * 50;
+        spawnT -= dt; if (spawnT <= 0) spawnT = F.moon ? moonSpawn(now) : F.grav ? gravSpawn(now) : spawn(now);
         shots.forEach(s => {
           if (s.homing > 0) { s.homing -= dt; const a = Math.atan2(P.y - s.y, P.x - s.x), v = 0.16 * rage(); s.vx += (Math.cos(a) * v - s.vx) * 0.04; s.vy += (Math.sin(a) * v - s.vy) * 0.04; }
           s.x += s.vx * dt; s.y += s.vy * dt;
@@ -594,12 +672,15 @@
         const kids = [];
         shots = shots.filter(s => { if (s.split && s.y >= s.split) { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, v = 0.13 * rage(); kids.push({ x: s.x, y: s.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, s: '•', c: '#ff9a3c' }); } return false; } return true; });
         shots.push(...kids);
-        shots = shots.filter(s => (s.laser || s.stomp || s.arm) ? now < s.liveUntil : s.bounce ? now < s.until : (s.x > -30 && s.x < 510 && s.y < CH_H + 30 && s.y > -40));
+        shots = shots.filter(s => (s.laser || s.stomp || s.arm || s.cannon) ? now < s.liveUntil : s.bounce ? now < s.until : (s.x > -30 && s.x < CW + 30 && s.y < CH_H + 30 && s.y > -40));
         // no invulnerability: every symbol that touches you deals damage, then disappears
         let hitNow = false;
         const dmgNow = () => Math.round((5 + Math.floor(rage() * 2)) * DMG_X * (F.defend ? 0.5 : 1));
         shots.forEach(s => {
-          if (s.stomp && !s.done && now >= s.warnUntil && Math.hypot(P.x - s.x, P.y - s.y) < 34) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.spike && !s.done && Math.abs(P.x - s.x) < 9 + 8 && P.y > ARENA.y1 - s.h - 8) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.gate && !s.done && Math.abs(P.x - s.x) < 10 + 8 && (P.y < s.gapY + 8 || P.y > s.gapY + s.gapH - 8)) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.cannon && !s.done && now >= s.warnUntil && Math.abs(((s.side === 'L' || s.side === 'R') ? P.y : P.x) - s.pos) < 22 + 8) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
+          if (s.stomp && !s.done && now >= s.warnUntil && Math.hypot(P.x - s.x, P.y - s.y) < (s.rad || 30) + 4) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; }
           if (s.arm && now >= s.warnUntil && (!s.lastHit || now - s.lastHit > 450)) { const a = armAngle(s, now); if (segDist(P.x, P.y, ARM_C.x, ARM_C.y, ARM_C.x + Math.cos(a) * ARM_L, ARM_C.y + Math.sin(a) * ARM_L) < 11) { s.lastHit = now; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } }
         });
         shots.forEach(s => { if (s.laser && !s.done && now >= s.warnUntil && Math.abs((s.axis === 'h' ? P.y : P.x) - s.pos) < 13) { s.done = true; F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; } });
@@ -609,7 +690,7 @@
           if (Math.hypot(s.x - P.x, s.y - P.y) < 30) { if (s.dir === F.shield) { blocked = now + 120; return false; } F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; }
           return true;
         });
-        shots = shots.filter(s => { if (!s.moonShot && !s.bar && !s.laser && !s.stomp && !s.arm && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
+        shots = shots.filter(s => { if (!s.moonShot && !s.spike && !s.gate && !s.cannon && !s.bar && !s.laser && !s.stomp && !s.arm && s.y > ARENA.y0 - 5 && Math.hypot(s.x - P.x, s.y - P.y) < 15) { F.hp = Math.max(0, F.hp - dmgNow()); hitNow = true; return false; } return true; });
         if (hitNow) {
           hurtFlash = now + 150;
           if (F.hp <= 0 && VENGE && !F.spared) { // once per fight, the Vengeful King refuses to let you fall
